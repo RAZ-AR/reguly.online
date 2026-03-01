@@ -6,6 +6,7 @@
     <title>Reguly — Airbnb EU 2026 | Version 2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Special+Gothic+Expanded+One&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <style>
         :root {
             --accent: #df5a48;
@@ -385,6 +386,24 @@
             </div>
         </section>
 
+        <!-- Free Checklist Banner -->
+        <section class="grid-line-b bg-[#111111] text-white">
+            <div class="p-6 sm:p-10 lg:p-16 flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+                <div>
+                    <div class="text-[9px] font-black uppercase tracking-[0.25em] text-[#df5a48] mb-3">Free Download — No Email Required</div>
+                    <h2 class="font-heading text-3xl sm:text-5xl mb-4">5 Steps to<br>May 20, 2026</h2>
+                    <p class="text-base sm:text-lg font-bold opacity-60 max-w-lg leading-tight">Complete compliance checklist: registration portals, required documents, monthly reporting setup. Print it, use it, stay legal.</p>
+                </div>
+                <div class="flex-shrink-0 w-full lg:w-auto">
+                    <button onclick="downloadChecklist()" class="btn-star w-full lg:w-auto justify-center" style="border-color: white; box-shadow: 6px 6px 0px rgba(255,255,255,0.3); white-space: nowrap;">
+                        ↓ Download Free Checklist
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </button>
+                    <p class="text-[9px] font-black uppercase tracking-widest opacity-30 text-center mt-3">PDF · Free · Always up to date</p>
+                </div>
+            </div>
+        </section>
+
         <!-- Pricing -->
         <section id="pricing" class="bg-[#111111] text-white">
             <div class="p-6 sm:p-12 lg:p-24 grid grid-cols-1 lg:grid-cols-3 gap-0">
@@ -394,7 +413,9 @@
                         <div class="text-6xl sm:text-7xl font-black mb-8 sm:mb-12">€0</div>
                         <ul class="space-y-4 sm:space-y-6 text-xs font-black uppercase tracking-[0.2em] opacity-40">
                             <li>Check 1 property</li>
-                            <li>Official Law links</li>
+                            <li>Compliance PDF Report</li>
+                            <li>5-Step Checklist PDF</li>
+                            <li>Official portal links</li>
                             <li>Sample listing text</li>
                         </ul>
                     </div>
@@ -510,9 +531,13 @@
                 </div>
                 <div class="p-6 lg:p-8">
                     <div id="result-content" class="mb-8"></div>
-                    <div class="mb-4">
-                        <button onclick="sendEmail(this)" class="btn-star w-full justify-center" style="font-size: 0.9rem;">
-                            ✉ Send to Email
+                    <div class="space-y-3 mb-4">
+                        <button onclick="downloadPDF()" class="btn-star w-full justify-center" style="font-size: 0.875rem;">
+                            ↓ Download PDF Report + Checklist
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                        </button>
+                        <button onclick="sendEmail(this)" class="w-full py-3.5 border border-[#111] font-black uppercase text-[10px] tracking-widest hover:bg-[#111] hover:text-white transition-all">
+                            ✉ Send Reminder to My Email
                         </button>
                     </div>
                     <button onclick="resetModal()" class="w-full text-center text-[9px] font-black uppercase tracking-widest opacity-30 hover:opacity-70 transition-opacity pt-3">
@@ -703,66 +728,78 @@
         // Fáilte Ireland, Government.nl, EU Regulation 2024/1028 — updated Feb 2026
         const complianceDB = {
             es: {
-                cities: ['Barcelona', 'Madrid', 'Valencia', 'Seville', 'Málaga', 'Palma de Mallorca', 'Bilbao'],
+                cities: ['Barcelona', 'Madrid', 'Valencia', 'Seville', 'Málaga', 'Palma de Mallorca', 'Bilbao', 'Alicante', 'Granada', 'San Sebastián'],
                 data: {
-                    'Barcelona':         { fine: '€600,000', days: 'No new licenses', note: 'All tourist licenses being phased out by Nov 2028. Freeze on new licenses already in effect.', authority: 'Ajuntament de Barcelona' },
-                    'Madrid':            { fine: '€600,000', days: 'Max 30 days (unlicensed)', note: 'Freeze on new licenses until Feb 2026. Planning complete ban in historic centre.', authority: 'Ayuntamiento de Madrid' },
-                    'Valencia':          { fine: '€600,000', days: 'License required', note: 'Urban compatibility report required before applying. Register via Portal Habitatge Valencia.', authority: 'Ajuntament de València' },
-                    'Seville':           { fine: '€600,000', days: 'License required', note: 'License cap in place — limited availability. Registration via national NRU portal.', authority: 'Ayuntamiento de Sevilla' },
-                    'Málaga':            { fine: '€600,000', days: 'No new licenses', note: '3-year freeze on new licenses in 43 districts since Jan 2025 — effective until 2027.', authority: 'Ayuntamiento de Málaga' },
-                    'Palma de Mallorca': { fine: '€600,000', days: 'License required', note: 'Balearic Islands: among strictest in Spain. Tourism license mandatory, limited quota.', authority: 'Ajuntament de Palma' },
-                    'Bilbao':            { fine: '€600,000', days: 'License required', note: 'Basque Country autonomous regulations apply. Registration via Udaletxea portal.', authority: 'Ayuntamiento de Bilbao' }
+                    'Barcelona':         { fine: '€600,000', days: 'No new licenses', note: 'All tourist licenses being phased out by Nov 2028. Freeze on new licenses already in effect.', authority: 'Ajuntament de Barcelona', portal: 'ajuntament.barcelona.cat/habitatgelic' },
+                    'Madrid':            { fine: '€600,000', days: 'Max 30 days (unlicensed)', note: 'Freeze on new licenses until Feb 2026. Planning complete ban in historic centre.', authority: 'Ayuntamiento de Madrid', portal: 'sede.madrid.es' },
+                    'Valencia':          { fine: '€600,000', days: 'License required', note: 'Urban compatibility report required before applying. Register via Portal Habitatge Valencia.', authority: 'Ajuntament de València', portal: 'habitatgequalitaturbana.gva.es' },
+                    'Seville':           { fine: '€600,000', days: 'License required', note: 'License cap in place — limited availability. Registration via Junta de Andalucía portal.', authority: 'Ayuntamiento de Sevilla', portal: 'juntadeandalucia.es/turismoculturayde porte' },
+                    'Málaga':            { fine: '€600,000', days: 'No new licenses', note: '3-year freeze on new licenses in 43 districts since Jan 2025 — effective until 2027.', authority: 'Ayuntamiento de Málaga', portal: 'juntadeandalucia.es/turismo' },
+                    'Palma de Mallorca': { fine: '€600,000', days: 'License required', note: 'Balearic Islands: among strictest in Spain. Tourism license mandatory, limited quota.', authority: 'Ajuntament de Palma', portal: 'idt.caib.es' },
+                    'Bilbao':            { fine: '€600,000', days: 'License required', note: 'Basque Country autonomous regulations apply. Registration via Euskadi Tourism portal.', authority: 'Ayuntamiento de Bilbao', portal: 'turismo.euskadi.eus' },
+                    'Alicante':          { fine: '€600,000', days: 'License required', note: 'Valencia Community regulations apply. Registration via Portal Habitatge Valencia.', authority: "Ajuntament d'Alacant", portal: 'habitatgequalitaturbana.gva.es' },
+                    'Granada':           { fine: '€600,000', days: 'License required', note: 'Andalusia regulations. Tourism registration required via Junta de Andalucía.', authority: 'Ayuntamiento de Granada', portal: 'juntadeandalucia.es/turismo' },
+                    'San Sebastián':     { fine: '€600,000', days: 'License required', note: 'Basque Country autonomous regulations apply. Strict enforcement in historic areas.', authority: 'Ayuntamiento de San Sebastián', portal: 'turismo.euskadi.eus' }
                 }
             },
             fr: {
-                cities: ['Paris', 'Lyon', 'Marseille', 'Nice', 'Bordeaux', 'Strasbourg', 'Toulouse'],
+                cities: ['Paris', 'Lyon', 'Marseille', 'Nice', 'Bordeaux', 'Strasbourg', 'Toulouse', 'Nantes', 'Montpellier', 'Lille'],
                 data: {
-                    'Paris':      { fine: '€20,000', days: 'Max 90 days/year', note: 'Reduced from 120 → 90 days as of Jan 2025. Mandatory registration since 2017. Strict enforcement.', authority: 'Mairie de Paris' },
-                    'Lyon':       { fine: '€20,000', days: 'Max 90 days/year', note: 'Following Paris model. 90-day annual cap effective Jan 2026. Registration required.', authority: 'Métropole de Lyon' },
-                    'Marseille':  { fine: '€20,000', days: 'Max 90 days/year', note: 'Aligned with stricter national rules since Feb 2025. Registration number mandatory on all listings.', authority: 'Mairie de Marseille' },
-                    'Nice':       { fine: '€20,000', days: 'Max 120 days/year', note: 'National standard applies. Registration number required on all platforms.', authority: 'Mairie de Nice' },
-                    'Bordeaux':   { fine: '€20,000', days: 'Max 120 days/year', note: 'National standard. Primary residence only. Registration via Mairie portal.', authority: 'Bordeaux Métropole' },
-                    'Strasbourg': { fine: '€20,000', days: 'Max 120 days/year', note: 'National standard applies. Tourism tax (taxe de séjour) must be collected per guest.', authority: 'Eurométropole de Strasbourg' },
-                    'Toulouse':   { fine: '€20,000', days: 'Max 120 days/year', note: 'Standard national regulations. Registration required via Mairie portal.', authority: 'Mairie de Toulouse' }
+                    'Paris':       { fine: '€20,000', days: 'Max 90 days/year', note: 'Reduced from 120 → 90 days as of Jan 2025. Mandatory registration since 2017. Strict enforcement.', authority: 'Mairie de Paris', portal: 'service-public.fr/particuliers/vosdroits/F2043' },
+                    'Lyon':        { fine: '€20,000', days: 'Max 90 days/year', note: 'Following Paris model. 90-day annual cap effective Jan 2026. Registration required.', authority: 'Métropole de Lyon', portal: 'service-public.fr/particuliers/vosdroits/F2043' },
+                    'Marseille':   { fine: '€20,000', days: 'Max 90 days/year', note: 'Aligned with stricter national rules since Feb 2025. Registration number mandatory on all listings.', authority: 'Mairie de Marseille', portal: 'service-public.fr/particuliers/vosdroits/F2043' },
+                    'Nice':        { fine: '€20,000', days: 'Max 120 days/year', note: 'National standard applies. Registration number required on all platforms.', authority: 'Mairie de Nice', portal: 'service-public.fr/particuliers/vosdroits/F2043' },
+                    'Bordeaux':    { fine: '€20,000', days: 'Max 120 days/year', note: 'National standard. Primary residence only. Registration via Mairie portal.', authority: 'Bordeaux Métropole', portal: 'service-public.fr/particuliers/vosdroits/F2043' },
+                    'Strasbourg':  { fine: '€20,000', days: 'Max 120 days/year', note: 'National standard applies. Tourism tax (taxe de séjour) must be collected per guest.', authority: 'Eurométropole de Strasbourg', portal: 'service-public.fr/particuliers/vosdroits/F2043' },
+                    'Toulouse':    { fine: '€20,000', days: 'Max 120 days/year', note: 'Standard national regulations. Registration required via Mairie portal.', authority: 'Mairie de Toulouse', portal: 'service-public.fr/particuliers/vosdroits/F2043' },
+                    'Nantes':      { fine: '€20,000', days: 'Max 120 days/year', note: 'Standard national regulations. Registration number required on all listings.', authority: 'Nantes Métropole', portal: 'service-public.fr/particuliers/vosdroits/F2043' },
+                    'Montpellier': { fine: '€20,000', days: 'Max 120 days/year', note: 'Standard national regulations. Registration required via Mairie portal.', authority: 'Mairie de Montpellier', portal: 'service-public.fr/particuliers/vosdroits/F2043' },
+                    'Lille':       { fine: '€20,000', days: 'Max 120 days/year', note: 'Standard national rules. Registration via Mairie portal.', authority: 'Mairie de Lille', portal: 'service-public.fr/particuliers/vosdroits/F2043' }
                 }
             },
             de: {
-                cities: ['Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne', 'Stuttgart', 'Dresden'],
+                cities: ['Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne', 'Stuttgart', 'Dresden', 'Düsseldorf', 'Leipzig', 'Nuremberg'],
                 data: {
-                    'Berlin':    { fine: '€500,000', days: 'Max 90 days/year', note: 'Zweckentfremdungsverbot (ZwVbG). Secondary homes: 90-day cap. Primary: registration required.', authority: 'Wohnungsamt Berlin' },
-                    'Munich':    { fine: '€6,000',   days: 'Max 56 days/year', note: 'ZeGe law: max 8 weeks/year for entire property. Registration number mandatory since 2018.', authority: 'Landeshauptstadt München' },
-                    'Hamburg':   { fine: '€6,000',   days: 'Max 55 days/year', note: 'HmbWoSchG: 55-day annual cap. Registration number required. Auto platform delisting without it.', authority: 'Bezirksamt Hamburg' },
-                    'Frankfurt': { fine: '€6,000',   days: '60–90 days/year', note: 'ZwEWG Hessen applies. District-specific limits. Registration number required on all listings.', authority: 'Stadtamt Frankfurt' },
-                    'Cologne':   { fine: '€6,000',   days: '56–90 days/year', note: 'ZwEWG NRW. Registration mandatory. Day limit varies by district — verify locally.', authority: 'Stadt Köln' },
-                    'Stuttgart': { fine: '€6,000',   days: 'Varies by district', note: 'BW ZwEWG: primary residence required for full-property rental. Registration number needed.', authority: 'Stadtamt Stuttgart' },
-                    'Dresden':   { fine: '€6,000',   days: 'License required', note: 'Saxony STR regulations. Registration required. Verify current local bylaws with city office.', authority: 'Stadtamt Dresden' }
+                    'Berlin':      { fine: '€500,000', days: 'Max 90 days/year', note: 'Zweckentfremdungsverbot (ZwVbG). Secondary homes: 90-day cap. Primary: registration required.', authority: 'Wohnungsamt Berlin', portal: 'service.berlin.de' },
+                    'Munich':      { fine: '€6,000',   days: 'Max 56 days/year', note: 'ZeGe law: max 8 weeks/year for entire property. Registration number mandatory since 2018.', authority: 'Landeshauptstadt München', portal: 'muenchen.de/rathaus' },
+                    'Hamburg':     { fine: '€6,000',   days: 'Max 55 days/year', note: 'HmbWoSchG: 55-day annual cap. Registration number required. Auto platform delisting without it.', authority: 'Bezirksamt Hamburg', portal: 'hamburg.de/bsw' },
+                    'Frankfurt':   { fine: '€6,000',   days: '60–90 days/year', note: 'ZwEWG Hessen applies. District-specific limits. Registration number required on all listings.', authority: 'Stadtamt Frankfurt', portal: 'frankfurt.de' },
+                    'Cologne':     { fine: '€6,000',   days: '56–90 days/year', note: 'ZwEWG NRW. Registration mandatory. Day limit varies by district — verify locally.', authority: 'Stadt Köln', portal: 'stadt-koeln.de' },
+                    'Stuttgart':   { fine: '€6,000',   days: 'Varies by district', note: 'BW ZwEWG: primary residence required for full-property rental. Registration number needed.', authority: 'Stadtamt Stuttgart', portal: 'stuttgart.de' },
+                    'Dresden':     { fine: '€6,000',   days: 'License required', note: 'Saxony STR regulations. Registration required. Verify current local bylaws with city office.', authority: 'Stadtamt Dresden', portal: 'dresden.de' },
+                    'Düsseldorf':  { fine: '€6,000',   days: '60–90 days/year', note: 'ZwEWG NRW applies. Registration mandatory. Registration number required on all listings.', authority: 'Stadtamt Düsseldorf', portal: 'duesseldorf.de' },
+                    'Leipzig':     { fine: '€6,000',   days: 'License required', note: 'Saxony STR regulations. Registration required. Verify current local bylaws.', authority: 'Stadtamt Leipzig', portal: 'leipzig.de' },
+                    'Nuremberg':   { fine: '€6,000',   days: 'Max 56 days/year', note: 'Bavaria ZeGe law: max 56 days/year for entire property. Registration number mandatory.', authority: 'Stadtamt Nürnberg', portal: 'nuernberg.de' }
                 }
             },
             nl: {
-                cities: ['Amsterdam', 'Rotterdam', 'The Hague', 'Utrecht', 'Eindhoven', 'Groningen'],
+                cities: ['Amsterdam', 'Rotterdam', 'The Hague', 'Utrecht', 'Eindhoven', 'Groningen', 'Maastricht', 'Breda'],
                 data: {
-                    'Amsterdam': { fine: '€400,000', days: 'Max 30 days/year', note: 'Strictest in NL. Permit required. Mandatory reporting before each rental. Self-occupancy enforced.', authority: 'Gemeente Amsterdam' },
-                    'Rotterdam': { fine: '€20,500',  days: 'Max 30 days/year', note: 'Standard Dutch 30-day cap. Self-occupancy required. Registration via city portal.', authority: 'Gemeente Rotterdam' },
-                    'The Hague': { fine: '€20,500',  days: 'Max 30 days/year', note: 'Standard Dutch rules. Registration and tourist tax (toeristenbelasting) required.', authority: 'Gemeente Den Haag' },
-                    'Utrecht':   { fine: '€20,500',  days: 'Max 30 days/year', note: 'Permit required. Self-occupancy rule enforced. Register via Gemeente Utrecht portal.', authority: 'Gemeente Utrecht' },
-                    'Eindhoven': { fine: '€20,500',  days: 'Max 30 days/year', note: 'Standard Dutch municipal rules. Permit required. Check local bylaws for specifics.', authority: 'Gemeente Eindhoven' },
-                    'Groningen': { fine: '€20,500',  days: 'Max 30 days/year', note: 'Standard Dutch rules apply. Registration required via city portal.', authority: 'Gemeente Groningen' }
+                    'Amsterdam':  { fine: '€400,000', days: 'Max 30 days/year', note: 'Strictest in NL. Permit required. Mandatory reporting before each rental. Self-occupancy enforced.', authority: 'Gemeente Amsterdam', portal: 'amsterdam.nl/wonen-leefomgeving/wonen/vakantieverhuur' },
+                    'Rotterdam':  { fine: '€20,500',  days: 'Max 30 days/year', note: 'Standard Dutch 30-day cap. Self-occupancy required. Registration via city portal.', authority: 'Gemeente Rotterdam', portal: 'rotterdam.nl' },
+                    'The Hague':  { fine: '€20,500',  days: 'Max 30 days/year', note: 'Standard Dutch rules. Registration and tourist tax (toeristenbelasting) required.', authority: 'Gemeente Den Haag', portal: 'denhaag.nl' },
+                    'Utrecht':    { fine: '€20,500',  days: 'Max 30 days/year', note: 'Permit required. Self-occupancy rule enforced. Register via Gemeente Utrecht portal.', authority: 'Gemeente Utrecht', portal: 'utrecht.nl' },
+                    'Eindhoven':  { fine: '€20,500',  days: 'Max 30 days/year', note: 'Standard Dutch municipal rules. Permit required. Check local bylaws for specifics.', authority: 'Gemeente Eindhoven', portal: 'eindhoven.nl' },
+                    'Groningen':  { fine: '€20,500',  days: 'Max 30 days/year', note: 'Standard Dutch rules apply. Registration required via city portal.', authority: 'Gemeente Groningen', portal: 'groningen.nl' },
+                    'Maastricht': { fine: '€20,500',  days: 'Max 30 days/year', note: 'Standard Dutch 30-day cap. Self-occupancy required. Register via Gemeente portal.', authority: 'Gemeente Maastricht', portal: 'gemeentemaastricht.nl' },
+                    'Breda':      { fine: '€20,500',  days: 'Max 30 days/year', note: 'Standard Dutch rules apply. Permit and self-occupancy required.', authority: 'Gemeente Breda', portal: 'breda.nl' }
                 }
             },
             ie: {
-                cities: ['Dublin', 'Cork', 'Galway', 'Limerick', 'Waterford'],
+                cities: ['Dublin', 'Cork', 'Galway', 'Limerick', 'Waterford', 'Kilkenny'],
                 data: {
-                    'Dublin':    { fine: '€5,000', days: 'Max 90 days/year', note: 'Registration with Fáilte Ireland required by May 2026. 90-day annual cap for full-property rentals.', authority: 'Dublin City Council / Fáilte Ireland' },
-                    'Cork':      { fine: '€5,000', days: 'Max 90 days/year', note: 'Registration via Fáilte Ireland platform by May 2026. Room rentals (homesharing) unrestricted.', authority: 'Cork City Council / Fáilte Ireland' },
-                    'Galway':    { fine: '€5,000', days: 'Max 90 days/year', note: 'Fáilte Ireland registration mandatory. Planning permission required for non-principal residence.', authority: 'Galway City Council / Fáilte Ireland' },
-                    'Limerick':  { fine: '€5,000', days: 'Max 90 days/year', note: 'Registration with Fáilte Ireland required. Annual renewal. Homesharing unrestricted.', authority: 'Limerick City Council / Fáilte Ireland' },
-                    'Waterford': { fine: '€5,000', days: 'Max 90 days/year', note: 'Standard Irish STR rules. Fáilte Ireland registration required by May 2026.', authority: 'Waterford City Council / Fáilte Ireland' }
+                    'Dublin':    { fine: '€5,000', days: 'Max 90 days/year', note: 'Registration with Fáilte Ireland required by May 2026. 90-day annual cap for full-property rentals.', authority: 'Dublin City Council / Fáilte Ireland', portal: 'register.gov.ie' },
+                    'Cork':      { fine: '€5,000', days: 'Max 90 days/year', note: 'Registration via Fáilte Ireland platform by May 2026. Room rentals (homesharing) unrestricted.', authority: 'Cork City Council / Fáilte Ireland', portal: 'register.gov.ie' },
+                    'Galway':    { fine: '€5,000', days: 'Max 90 days/year', note: 'Fáilte Ireland registration mandatory. Planning permission required for non-principal residence.', authority: 'Galway City Council / Fáilte Ireland', portal: 'register.gov.ie' },
+                    'Limerick':  { fine: '€5,000', days: 'Max 90 days/year', note: 'Registration with Fáilte Ireland required. Annual renewal. Homesharing unrestricted.', authority: 'Limerick City Council / Fáilte Ireland', portal: 'register.gov.ie' },
+                    'Waterford': { fine: '€5,000', days: 'Max 90 days/year', note: 'Standard Irish STR rules. Fáilte Ireland registration required by May 2026.', authority: 'Waterford City Council / Fáilte Ireland', portal: 'register.gov.ie' },
+                    'Kilkenny':  { fine: '€5,000', days: 'Max 90 days/year', note: 'Standard Irish STR rules. Fáilte Ireland registration required by May 2026.', authority: 'Kilkenny County Council / Fáilte Ireland', portal: 'register.gov.ie' }
                 }
             },
             other: {
                 cities: ['My city'],
                 data: {
-                    'My city': { fine: '€15,000', days: 'Registration required', note: 'EU Regulation 2024/1028 applies to all EU member states. Check local authority for city-specific rules.', authority: 'Local Authority' }
+                    'My city': { fine: '€15,000', days: 'Registration required', note: 'EU Regulation 2024/1028 applies to all EU member states. Check local authority for city-specific rules.', authority: 'Local Authority', portal: 'eur-lex.europa.eu' }
                 }
             }
         };
@@ -1022,44 +1059,350 @@
             fetch(SCRIPT_URL, { method: 'POST', body: params, mode: 'no-cors' }).catch(() => {});
         }
 
+        // =====================
+        // PDF GENERATION (jsPDF)
+        // =====================
+        function getChecklistSteps(country, info, days) {
+            const extraDocs = {
+                es: ['Cadastral reference (Referencia catastral)', 'Urban compatibility certificate (Informe de compatibilidad urbanistica)', 'Responsible declaration form (Declaracion responsable)'],
+                fr: ['Proof of primary residence (attestation sur l\'honneur)', 'Tax ID (numero fiscal / SIRET if applicable)'],
+                de: ['Registration certificate (Anmeldebestatigung / Meldebestatigung)', 'Property extract (Grundbuchauszug) if applicable'],
+                nl: ['DigiD login for Gemeente online portal', 'Self-occupancy declaration (eigenbewoningsverklaring)', 'Proof of home insurance'],
+                ie: ['PPSN (Irish Personal Public Service Number)', 'Planning permission (if non-principal private residence)'],
+            };
+            const docs = extraDocs[country] || ['Valid photo ID or passport', 'Property ownership or lease document'];
+            const portal = info?.portal ? info.portal : (info?.authority || 'local authority portal');
+
+            return [
+                {
+                    title: 'CHECK YOUR STATUS',
+                    deadline: 'Do this now',
+                    items: [
+                        'Confirm whether your property requires registration',
+                        'Identify your rental type: entire apartment, room, or house',
+                        'Determine: primary residence (you live there) or secondary?',
+                        'Note your city day limit: ' + (days || 'check locally'),
+                        'Clarify: tourism licence required or simple registration?',
+                    ]
+                },
+                {
+                    title: 'GATHER REQUIRED DOCUMENTS',
+                    deadline: 'By April 1',
+                    items: [
+                        'Valid passport or national ID (must be current)',
+                        'Property ownership deed or lease agreement',
+                        'Proof of residence at the property (utility bill or certificate)',
+                        ...docs,
+                    ]
+                },
+                {
+                    title: 'REGISTER WITH LOCAL AUTHORITY',
+                    deadline: 'By May 1',
+                    items: [
+                        'Visit the official portal: ' + portal,
+                        'Create an account on the registration portal',
+                        'Complete the application form and upload all documents',
+                        'Pay registration fee if required (Spain ~180 EUR, Netherlands ~50 EUR)',
+                        'Save your Registration Number (NRU / Reg.Nr. / Reference)',
+                    ]
+                },
+                {
+                    title: 'UPDATE ALL LISTING PLATFORMS',
+                    deadline: 'By May 20',
+                    items: [
+                        'Add registration number to your Airbnb listing title or description',
+                        'Add registration number to your Booking.com listing',
+                        'Update all other platforms: VRBO, Expedia, HomeAway, etc.',
+                        'Screenshot each updated listing for your records',
+                    ]
+                },
+                {
+                    title: 'SET UP MONTHLY REPORTING',
+                    deadline: 'Ongoing',
+                    items: [
+                        'Find your city monthly reporting portal and deadline',
+                        'Report monthly: nights rented, income, anonymised guest count',
+                        'Store all documents for minimum 5 years (EU regulation)',
+                        'Set a recurring reminder on the 1st of each month',
+                        'Subscribe to regulation updates at reguly.eu',
+                    ]
+                }
+            ];
+        }
+
+        function buildPDF(config) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const W = 210, m = 18;
+
+            function drawHeader(title) {
+                doc.setFillColor(17, 17, 17);
+                doc.rect(0, 0, W, 28, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(18);
+                doc.text('REGULY', m, 16);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7);
+                doc.text('EU REGULATION 2024/1028', m, 23);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8);
+                doc.text(title, W - m, 16, { align: 'right' });
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7);
+                doc.text('reguly.eu', W - m, 23, { align: 'right' });
+                doc.setTextColor(17, 17, 17);
+            }
+
+            function drawFooter() {
+                const fy = 287;
+                doc.setFillColor(17, 17, 17);
+                doc.rect(0, fy, W, 10, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(6.5);
+                doc.text(
+                    'Generated by Reguly.eu  \u2022  ' + new Date().toLocaleDateString('en-GB') + '  \u2022  EU Regulation 2024/1028  \u2022  \u00A9 2026 REGULY',
+                    W / 2, fy + 6.5, { align: 'center' }
+                );
+                doc.setTextColor(17, 17, 17);
+            }
+
+            function drawChecklist(steps, subtitle) {
+                let y = 38;
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(17);
+                doc.setTextColor(17, 17, 17);
+                doc.text('5 STEPS TO MAY 20, 2026', m, y);
+                y += 6;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8);
+                doc.setTextColor(120, 120, 120);
+                doc.text(subtitle, m, y);
+                y += 14;
+
+                steps.forEach(function(step, si) {
+                    if (y > 265) { doc.addPage(); drawHeader('5-STEP CHECKLIST'); drawFooter(); y = 38; }
+
+                    doc.setFillColor(17, 17, 17);
+                    doc.rect(m, y - 6, 8, 8, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(9);
+                    doc.text(String(si + 1), m + 2.5, y - 0.5);
+
+                    doc.setTextColor(17, 17, 17);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(10);
+                    doc.text(step.title, m + 11, y - 0.5);
+
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(7);
+                    doc.setTextColor(120, 120, 120);
+                    doc.text(step.deadline, W - m, y - 0.5, { align: 'right' });
+
+                    y += 8;
+
+                    step.items.forEach(function(item) {
+                        doc.setDrawColor(150, 150, 150);
+                        doc.setLineWidth(0.4);
+                        doc.rect(m + 2, y - 4.5, 4, 4, 'S');
+                        doc.setTextColor(50, 50, 50);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(8);
+                        var iLines = doc.splitTextToSize(item, W - m * 2 - 14);
+                        doc.text(iLines, m + 9, y - 1);
+                        y += iLines.length * 5 + 1.5;
+                    });
+                    y += 6;
+                });
+            }
+
+            // ---- PAGE 1: COMPLIANCE REPORT ----
+            if (config.address) {
+                drawHeader('COMPLIANCE REPORT');
+                drawFooter();
+                let y = 40;
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7);
+                doc.setTextColor(120, 120, 120);
+                doc.text('ADDRESS', m, y);
+                y += 5;
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(13);
+                doc.setTextColor(17, 17, 17);
+                var addrText = config.address + ', ' + config.city + (config.district ? ' \u2014 ' + config.district : '');
+                var addrLines = doc.splitTextToSize(addrText, W - m * 2);
+                doc.text(addrLines, m, y);
+                y += addrLines.length * 6 + 6;
+
+                doc.setFillColor(223, 90, 72);
+                doc.rect(m, y, 66, 8, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7.5);
+                doc.text('REGISTRATION REQUIRED', m + 3, y + 5.5);
+                y += 18;
+
+                var rows = [
+                    ['EU DEADLINE', 'May 20, 2026'],
+                    ['MAX DAYS / YEAR', config.days],
+                    ['MAX FINE', config.fine],
+                    ['AUTHORITY', config.authority],
+                ];
+                rows.forEach(function(r) {
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(6.5);
+                    doc.setTextColor(120, 120, 120);
+                    doc.text(r[0], m, y);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(11);
+                    doc.setTextColor(17, 17, 17);
+                    doc.text(r[1], m, y + 6);
+                    doc.setDrawColor(210, 210, 210);
+                    doc.setLineWidth(0.3);
+                    doc.line(m, y + 11, W - m, y + 11);
+                    y += 19;
+                });
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(6.5);
+                doc.setTextColor(120, 120, 120);
+                doc.text('KEY RULE', m, y);
+                y += 5;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8.5);
+                doc.setTextColor(17, 17, 17);
+                var noteLines = doc.splitTextToSize(config.note, W - m * 2);
+                doc.text(noteLines, m, y);
+                y += noteLines.length * 5.5 + 8;
+
+                if (config.portal) {
+                    doc.setDrawColor(210, 210, 210);
+                    doc.setLineWidth(0.3);
+                    doc.line(m, y, W - m, y);
+                    y += 8;
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(6.5);
+                    doc.setTextColor(120, 120, 120);
+                    doc.text('REGISTRATION PORTAL', m, y);
+                    y += 5;
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(9);
+                    doc.setTextColor(223, 90, 72);
+                    doc.text(config.portal, m, y);
+                    y += 10;
+                }
+
+                doc.setDrawColor(210, 210, 210);
+                doc.setLineWidth(0.3);
+                doc.line(m, y, W - m, y);
+                y += 8;
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(6.5);
+                doc.setTextColor(120, 120, 120);
+                doc.text('REQUIRED DOCUMENTS', m, y);
+                y += 5;
+                config.docs.forEach(function(d) {
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(8);
+                    doc.setTextColor(17, 17, 17);
+                    doc.text('\u2022  ' + d, m + 2, y);
+                    y += 5.5;
+                });
+            }
+
+            // ---- PAGE 2: 5-STEP CHECKLIST ----
+            if (config.address) doc.addPage();
+            drawHeader('5-STEP CHECKLIST');
+            drawFooter();
+            var subtitle = config.address
+                ? 'Compliance checklist for: ' + config.address + ', ' + config.city
+                : 'EU Short-Term Rental Compliance Guide \u2014 Regulation 2024/1028';
+            drawChecklist(config.steps, subtitle);
+
+            return doc;
+        }
+
         function downloadPDF() {
             const city    = document.getElementById('modal-city').value;
             const address = document.getElementById('modal-address').value.trim();
-            const info    = (() => {
-                const country = document.getElementById('modal-country').value;
-                return (complianceDB[country]?.data[city]) || { fine: '€15,000', note: '', authority: 'Local Authority' };
-            })();
-            const text = [
-                'REGULY — COMPLIANCE REPORT',
-                '============================',
-                '',
-                `Address:    ${address}, ${city}`,
-                `Authority:  ${info.authority}`,
-                `Required:   YES`,
-                `Deadline:   May 20, 2026`,
-                `Max Fine:   ${info.fine}`,
-                `Note:       ${info.note}`,
-                '',
-                'Generated by Reguly.eu — EU Regulation 2024/1028',
-                '© 2026 REGULY'
-            ].join('\n');
-            const blob = new Blob([text], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `reguly-${city.toLowerCase().replace(/\s+/g, '-')}.txt`;
-            a.click();
+            const country = document.getElementById('modal-country').value;
+            const info    = (complianceDB[country]?.data[city]) || { fine: '\u20AC15,000', note: 'EU Regulation 2024/1028 applies.', authority: 'Local Authority', portal: '', days: 'Registration required' };
+            const districtInfo = (districtDB[city] && selectedDistrict) ? districtDB[city][selectedDistrict] || null : null;
+            const effectiveDays = districtInfo?.days || info.days || '\u2014';
+            const effectiveNote = districtInfo?.note || info.note;
+
+            const countryDocs = {
+                es: ['Valid ID or passport', 'Cadastral reference (Referencia catastral)', 'Urban compatibility certificate', 'Responsible declaration form'],
+                fr: ['Valid ID or passport', 'Proof of primary residence (attestation)', 'Tax ID (numero fiscal)'],
+                de: ['Valid ID or passport', 'Registration certificate (Anmeldebestatigung)', 'Property extract (Grundbuchauszug) if applicable'],
+                nl: ['Valid ID or passport', 'DigiD login', 'Self-occupancy declaration (eigenbewoningsverklaring)'],
+                ie: ['Valid ID or passport', 'PPSN (Irish tax number)', 'Planning permission (if non-principal residence)'],
+            };
+
+            const config = {
+                address,
+                city,
+                district: selectedDistrict || '',
+                days: effectiveDays,
+                fine: info.fine,
+                authority: info.authority,
+                note: effectiveNote,
+                portal: info.portal || '',
+                docs: countryDocs[country] || ['Valid ID or passport', 'Property ownership document'],
+                steps: getChecklistSteps(country, info, effectiveDays),
+            };
+
+            const doc = buildPDF(config);
+            doc.save('reguly-' + city.toLowerCase().replace(/\s+/g, '-') + '-report.pdf');
+        }
+
+        function downloadChecklist() {
+            const steps = getChecklistSteps('', null, 'Varies by city — see report');
+            const doc = buildPDF({ steps });
+            doc.save('reguly-5steps-checklist.pdf');
         }
 
         function sendEmail(btn) {
             const original = btn.innerHTML;
-            btn.innerHTML = '✓ Sent!';
-            btn.style.background = '#16a34a';
-            btn.style.borderColor = '#16a34a';
-            setTimeout(() => {
-                btn.innerHTML = original;
-                btn.style.background = '';
-                btn.style.borderColor = '';
-            }, 3000);
+            btn.disabled = true;
+            btn.innerHTML = 'Sending\u2026';
+
+            const city    = document.getElementById('modal-city').value;
+            const address = document.getElementById('modal-address').value.trim();
+            const country = document.getElementById('modal-country').value;
+            const email   = document.getElementById('modal-email').value.trim();
+            const info    = (complianceDB[country]?.data[city]) || { fine: '\u20AC15,000', note: '', authority: 'Local Authority' };
+            const countryEl = document.getElementById('modal-country');
+            const countryName = countryEl.options[countryEl.selectedIndex]?.text || '';
+
+            const params = new URLSearchParams({
+                action:    'reminder',
+                country:   countryName,
+                city,
+                address,
+                email,
+                fine:      info.fine,
+                authority: info.authority,
+                note:      info.note,
+                deadline:  'May 20, 2026',
+            });
+
+            fetch(SCRIPT_URL, { method: 'POST', body: params, mode: 'no-cors' })
+                .catch(() => {})
+                .finally(() => {
+                    btn.innerHTML = '\u2713 Reminder Scheduled!';
+                    btn.style.background = '#166534';
+                    btn.style.color = 'white';
+                    btn.disabled = false;
+                    setTimeout(() => {
+                        btn.innerHTML = original;
+                        btn.style.background = '';
+                        btn.style.color = '';
+                    }, 4000);
+                });
         }
     </script>
 </body>
