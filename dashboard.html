@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Reguly</title>
+    <meta name="robots" content="noindex">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Special+Gothic+Expanded+One&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <style>
+        :root { --accent: #df5a48; --dark: #111111; --bg: #f3f3f3; }
+        body { background-color: var(--bg); color: var(--dark); font-family: 'Inter', sans-serif; margin: 0; min-height: 100vh; }
+        .font-heading { font-family: 'Special Gothic Expanded One', sans-serif; text-transform: uppercase; line-height: 0.85; letter-spacing: -0.05em; }
+        .grid-line { border: 1px solid var(--dark); }
+        .grid-line-b { border-bottom: 1px solid var(--dark); }
+        .grid-line-t { border-top: 1px solid var(--dark); }
+        .modal-input {
+            width: 100%; border: 1px solid var(--dark); background: white;
+            padding: 0.875rem 1rem; font-family: 'Inter', sans-serif;
+            font-weight: 700; font-size: 0.875rem; outline: none;
+            -webkit-appearance: none; box-sizing: border-box;
+        }
+        .modal-input:focus { box-shadow: 0 0 0 2px var(--accent); }
+        .btn-star {
+            background: var(--accent); color: white; border: 1px solid var(--dark);
+            font-weight: 900; text-transform: uppercase; padding: 0.875rem 1.5rem;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            box-shadow: 4px 4px 0px var(--dark); transition: all 0.15s ease;
+            font-size: 0.75rem; cursor: pointer; letter-spacing: 0.1em;
+        }
+        .btn-star:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0px var(--dark); background: var(--dark); }
+
+        /* Status badges */
+        .badge { font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; font-size: 9px; padding: 0.3rem 0.6rem; display: inline-block; }
+        .badge-pending     { background: #f3f3f3; color: #111; border: 1px solid #111; }
+        .badge-in_progress { background: #fef3c7; color: #92400e; border: 1px solid #92400e; }
+        .badge-registered  { background: #d1fae5; color: #065f46; border: 1px solid #065f46; }
+        .badge-exempt      { background: #e0e7ff; color: #3730a3; border: 1px solid #3730a3; }
+
+        /* Property card */
+        .prop-card { border: 1px solid var(--dark); background: white; }
+        .prop-card-header { background: var(--dark); color: white; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; }
+        .prop-row { display: flex; justify-content: space-between; padding: 0.625rem 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.08); gap: 1rem; }
+        .prop-row:last-child { border-bottom: none; }
+        .prop-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.4; flex-shrink: 0; padding-top: 2px; }
+        .prop-value { font-weight: 700; font-size: 0.8rem; text-align: right; }
+
+        /* Status modal */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .modal-box { background: var(--bg); border: 1px solid var(--dark); width: 100%; max-width: 480px; animation: slideUp 0.2s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Countdown strip */
+        .marquee-strip { overflow: hidden; white-space: nowrap; display: flex; background: var(--dark); color: var(--bg); padding: 0.6rem 0; border-top: 1px solid var(--dark); border-bottom: 1px solid var(--dark); }
+        .marquee-inner { display: flex; animation: marquee 25s linear infinite; gap: 4rem; padding-left: 4rem; font-size: 0.75rem; font-weight: 900; letter-spacing: 0.15em; text-transform: uppercase; }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+        /* Loading spinner */
+        .spinner { border: 3px solid rgba(0,0,0,0.1); border-top-color: var(--accent); border-radius: 50%; width: 32px; height: 32px; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header style="border-bottom: 1px solid var(--dark);">
+        <div class="flex items-center justify-between px-6 lg:px-10" style="height: 64px;">
+            <a href="/" style="display:flex; align-items:center;">
+                <img src="/Reguly.svg" alt="Reguly" style="height: 28px;">
+            </a>
+            <div class="flex items-center gap-6">
+                <span id="user-email" class="text-[10px] font-black uppercase tracking-widest opacity-40 hidden"></span>
+                <button onclick="signOut()" class="font-black uppercase text-[10px] tracking-widest hover:text-[#df5a48] transition-colors">
+                    Sign Out
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- COUNTDOWN STRIP -->
+    <div class="marquee-strip">
+        <div class="marquee-inner" id="marquee-inner-1"></div>
+        <div class="marquee-inner" id="marquee-inner-2"></div>
+    </div>
+
+    <!-- MAIN -->
+    <main class="px-6 lg:px-10 py-8 lg:py-12">
+
+        <!-- TITLE ROW -->
+        <div class="flex flex-wrap items-start justify-between gap-4 mb-8" style="border-bottom: 1px solid var(--dark); padding-bottom: 1.5rem;">
+            <div class="flex items-center gap-4">
+                <h1 class="font-heading text-3xl lg:text-5xl">YOUR PROPERTIES</h1>
+                <span id="plan-badge" class="badge badge-pending" style="margin-top: 4px;"></span>
+            </div>
+            <button onclick="addProperty()" class="btn-star">
+                + Add Property
+            </button>
+        </div>
+
+        <!-- LOADING -->
+        <div id="loading-state" class="flex justify-center py-16">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- UPGRADE BANNER (free plan, 1+ properties) -->
+        <div id="upgrade-banner" class="hidden mb-6 p-5 flex flex-wrap items-center justify-between gap-4" style="background: var(--dark); border: 1px solid var(--dark);">
+            <div>
+                <p class="font-black uppercase text-[10px] tracking-widest mb-1" style="color: var(--accent);">FREE PLAN LIMIT REACHED</p>
+                <p class="font-bold text-sm" style="color: #f3f3f3;">Track unlimited properties with Pro — manage your entire portfolio.</p>
+            </div>
+            <button onclick="upgradeClick()" class="btn-star" style="background: var(--accent); flex-shrink: 0;">
+                Upgrade to Pro €29/mo →
+            </button>
+        </div>
+
+        <!-- PROPERTIES GRID -->
+        <div id="props-grid" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
+
+        <!-- EMPTY STATE -->
+        <div id="empty-state" class="hidden text-center py-20">
+            <h2 class="font-heading text-4xl lg:text-6xl mb-6" style="color: var(--dark);">NO PROPERTIES YET</h2>
+            <p class="font-bold opacity-50 mb-10 text-sm">Check your address and save the compliance report to start tracking.</p>
+            <a href="/" class="btn-star" style="display: inline-flex;">
+                → Check Address
+            </a>
+        </div>
+
+    </main>
+
+    <!-- STATUS UPDATE MODAL -->
+    <div id="status-modal" class="overlay hidden">
+        <div class="modal-box">
+            <div class="flex items-center justify-between p-6" style="border-bottom: 1px solid var(--dark); background: var(--dark);">
+                <h3 class="font-heading text-xl" style="color: var(--accent);">UPDATE STATUS</h3>
+                <button onclick="closeStatusModal()" class="font-heading text-3xl leading-none hover:text-[#df5a48] transition-colors" style="color: white; width:2rem; height:2rem; display:flex; align-items:center; justify-content:center;">×</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block font-black uppercase text-[10px] tracking-widest mb-2">Status</label>
+                    <select id="status-select" class="modal-input">
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="registered">Registered</option>
+                        <option value="exempt">Exempt</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-black uppercase text-[10px] tracking-widest mb-2">Registration Number <span class="opacity-40">(optional)</span></label>
+                    <input id="reg-number-input" type="text" class="modal-input" placeholder="e.g. VUT-2025-00123">
+                </div>
+                <div>
+                    <label class="block font-black uppercase text-[10px] tracking-widest mb-2">Registration Date <span class="opacity-40">(optional)</span></label>
+                    <input id="reg-date-input" type="date" class="modal-input">
+                </div>
+                <button onclick="saveStatus()" id="save-status-btn" class="btn-star w-full justify-center mt-2">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL  = 'https://cgatzulpumyygjbazjqk.supabase.co';
+        const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnYXR6dWxwdW15eWdqYmF6anFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0Njk0OTMsImV4cCI6MjA4ODA0NTQ5M30.ybfIp7WvGAqy7C1Odi2Vpna9-8xsOdLHtYu2pcB_CNc';
+        const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+        let currentUser   = null;
+        let userPlan      = 'free';
+        let properties    = [];
+        let editingPropId = null;
+
+        // ── Countdown strip ──────────────────────────────
+        const deadline   = new Date('2026-05-20T00:00:00Z');
+        const daysLeft   = Math.max(0, Math.ceil((deadline - Date.now()) / 86400000));
+        const stripItems = Array(8).fill(null).map(() =>
+            `<span>${daysLeft} DAYS LEFT — EU REG 2024/1028 — MAY 20, 2026 DEADLINE</span>`
+        );
+        ['marquee-inner-1', 'marquee-inner-2'].forEach(id => {
+            document.getElementById(id).innerHTML = stripItems.join('');
+        });
+
+        // ── Auth guard ───────────────────────────────────
+        async function init() {
+            const { data: { session } } = await sbClient.auth.getSession();
+            if (!session) { window.location.href = '/signup.html'; return; }
+
+            currentUser = session.user;
+            document.getElementById('user-email').textContent = currentUser.email;
+            document.getElementById('user-email').classList.remove('hidden');
+
+            // Load profile plan
+            const { data: profile } = await sbClient
+                .from('profiles').select('plan').eq('id', currentUser.id).single();
+            userPlan = profile?.plan || 'free';
+
+            const planBadge = document.getElementById('plan-badge');
+            planBadge.textContent = userPlan.toUpperCase();
+            planBadge.className = `badge ${userPlan === 'pro' ? 'badge-registered' : 'badge-pending'}`;
+
+            await loadProperties();
+
+            // Auto-save pending property from sessionStorage
+            const pending = sessionStorage.getItem('pendingProperty');
+            if (pending) {
+                sessionStorage.removeItem('pendingProperty');
+                const p = JSON.parse(pending);
+                if (userPlan === 'free' && properties.length >= 1) {
+                    // show upgrade banner instead
+                    document.getElementById('upgrade-banner').classList.remove('hidden');
+                } else {
+                    await sbClient.from('properties').insert({
+                        user_id:   currentUser.id,
+                        country:   p.country,
+                        city:      p.city,
+                        address:   p.address,
+                        district:  p.district,
+                        fine:      p.fine,
+                        authority: p.authority,
+                        portal:    p.portal,
+                        max_days:  p.max_days,
+                        key_rule:  p.key_rule,
+                    });
+                    await loadProperties();
+                }
+            }
+        }
+
+        async function loadProperties() {
+            const { data, error } = await sbClient
+                .from('properties')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            document.getElementById('loading-state').classList.add('hidden');
+
+            if (error || !data) { renderEmpty(); return; }
+            properties = data;
+
+            if (data.length === 0) { renderEmpty(); return; }
+
+            // Upgrade banner for free plan at limit
+            if (userPlan === 'free' && data.length >= 1) {
+                document.getElementById('upgrade-banner').classList.remove('hidden');
+            }
+
+            renderProperties(data);
+        }
+
+        function renderEmpty() {
+            document.getElementById('props-grid').classList.add('hidden');
+            document.getElementById('empty-state').classList.remove('hidden');
+        }
+
+        function statusBadgeClass(s) {
+            return { pending: 'badge-pending', in_progress: 'badge-in_progress', registered: 'badge-registered', exempt: 'badge-exempt' }[s] || 'badge-pending';
+        }
+
+        function statusLabel(s) {
+            return { pending: 'Pending', in_progress: 'In Progress', registered: 'Registered', exempt: 'Exempt' }[s] || s;
+        }
+
+        function renderProperties(props) {
+            const grid = document.getElementById('props-grid');
+            grid.classList.remove('hidden');
+            grid.innerHTML = props.map(p => `
+                <div class="prop-card">
+                    <div class="prop-card-header">
+                        <div>
+                            <div class="font-heading text-lg" style="color: white;">${p.city}</div>
+                            <div style="font-size: 11px; opacity: 0.5; margin-top: 2px;">${p.address}${p.district ? ' · ' + p.district : ''}</div>
+                        </div>
+                        <span class="badge ${statusBadgeClass(p.status)}">${statusLabel(p.status)}</span>
+                    </div>
+                    <div class="p-4 pb-0">
+                        ${p.fine    ? `<div class="prop-row"><span class="prop-label">Max Fine</span><span class="prop-value font-heading" style="color:var(--accent);">${p.fine}</span></div>` : ''}
+                        ${p.authority ? `<div class="prop-row"><span class="prop-label">Authority</span><span class="prop-value">${p.authority}</span></div>` : ''}
+                        ${p.max_days && p.max_days !== '—' ? `<div class="prop-row"><span class="prop-label">Max days/yr</span><span class="prop-value">${p.max_days}</span></div>` : ''}
+                        ${p.key_rule ? `<div class="prop-row"><span class="prop-label">Key rule</span><span class="prop-value" style="opacity:0.6; font-weight:500; font-size:0.75rem;">${p.key_rule}</span></div>` : ''}
+                        <div class="prop-row">
+                            <span class="prop-label">Reg. Number</span>
+                            <span class="prop-value">${p.reg_number || '<span style="opacity:0.3">Not registered</span>'}</span>
+                        </div>
+                        ${p.reg_date ? `<div class="prop-row"><span class="prop-label">Reg. Date</span><span class="prop-value">${p.reg_date}</span></div>` : ''}
+                    </div>
+                    <div class="flex gap-2 p-4 pt-3" style="border-top: 1px solid rgba(0,0,0,0.08);">
+                        <button onclick="openStatusModal('${p.id}', '${p.status}', '${p.reg_number || ''}', '${p.reg_date || ''}')"
+                            class="flex-1 py-2 border border-[#111] font-black uppercase text-[10px] tracking-widest hover:bg-[#111] hover:text-white transition-all">
+                            Update Status
+                        </button>
+                        <button onclick="deleteProperty('${p.id}')"
+                            class="py-2 px-3 border border-[#111] font-black uppercase text-[10px] tracking-widest hover:bg-[#df5a48] hover:border-[#df5a48] hover:text-white transition-all">
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ── Status modal ─────────────────────────────────
+        function openStatusModal(id, status, regNumber, regDate) {
+            editingPropId = id;
+            document.getElementById('status-select').value       = status;
+            document.getElementById('reg-number-input').value    = regNumber || '';
+            document.getElementById('reg-date-input').value      = regDate   || '';
+            document.getElementById('status-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeStatusModal() {
+            document.getElementById('status-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+            editingPropId = null;
+        }
+
+        async function saveStatus() {
+            if (!editingPropId) return;
+            const btn = document.getElementById('save-status-btn');
+            btn.disabled = true;
+            btn.textContent = 'Saving…';
+
+            const updates = {
+                status:     document.getElementById('status-select').value,
+                reg_number: document.getElementById('reg-number-input').value.trim() || null,
+                reg_date:   document.getElementById('reg-date-input').value || null,
+            };
+
+            const { error } = await sbClient.from('properties').update(updates).eq('id', editingPropId);
+
+            btn.disabled = false;
+            btn.textContent = 'Save Changes';
+
+            if (!error) {
+                closeStatusModal();
+                await loadProperties();
+            }
+        }
+
+        // ── Delete property ──────────────────────────────
+        async function deleteProperty(id) {
+            if (!confirm('Delete this property?')) return;
+            await sbClient.from('properties').delete().eq('id', id);
+            await loadProperties();
+            // Hide upgrade banner if back under limit
+            if (userPlan === 'free' && properties.length < 1) {
+                document.getElementById('upgrade-banner').classList.add('hidden');
+            }
+        }
+
+        // ── Add property → go to home ─────────────────────
+        function addProperty() {
+            window.location.href = '/';
+        }
+
+        // ── Upgrade (stub) ────────────────────────────────
+        function upgradeClick() {
+            alert('Pro plan coming soon! We will notify you at ' + (currentUser?.email || 'your email'));
+        }
+
+        // ── Sign out ──────────────────────────────────────
+        async function signOut() {
+            await sbClient.auth.signOut();
+            window.location.href = '/';
+        }
+
+        // ── Close modal on overlay click ──────────────────
+        document.getElementById('status-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeStatusModal();
+        });
+
+        init();
+    </script>
+</body>
+</html>

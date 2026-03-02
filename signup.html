@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account — Reguly</title>
+    <meta name="robots" content="noindex">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Special+Gothic+Expanded+One&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <style>
+        :root { --accent: #df5a48; --dark: #111111; --bg: #f3f3f3; }
+        body { background-color: var(--bg); color: var(--dark); font-family: 'Inter', sans-serif; margin: 0; min-height: 100vh; }
+        .font-heading { font-family: 'Special Gothic Expanded One', sans-serif; text-transform: uppercase; line-height: 0.85; letter-spacing: -0.05em; }
+        .grid-line { border: 1px solid var(--dark); }
+        .grid-line-b { border-bottom: 1px solid var(--dark); }
+        .modal-input {
+            width: 100%; border: 1px solid var(--dark); background: white;
+            padding: 0.875rem 1rem; font-family: 'Inter', sans-serif;
+            font-weight: 700; font-size: 0.875rem; outline: none;
+            -webkit-appearance: none; box-sizing: border-box;
+        }
+        .modal-input:focus { box-shadow: 0 0 0 2px var(--accent); }
+        .btn-star {
+            background: var(--accent); color: white; border: 1px solid var(--dark);
+            font-weight: 900; text-transform: uppercase; padding: 1rem 2rem;
+            display: inline-flex; align-items: center; gap: 0.75rem;
+            box-shadow: 4px 4px 0px var(--dark); transition: all 0.15s ease;
+            font-size: 0.875rem; cursor: pointer; width: 100%; justify-content: center;
+            letter-spacing: 0.1em;
+        }
+        .btn-star:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0px var(--dark); background: var(--dark); }
+        .btn-star:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 4px 4px 0px var(--dark); }
+        .error-msg { color: var(--accent); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; margin-top: 6px; }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header style="border-bottom: 1px solid var(--dark);">
+        <div class="flex items-center justify-between px-6 lg:px-10" style="height: 64px;">
+            <a href="/" style="display:flex; align-items:center;">
+                <img src="/Reguly.svg" alt="Reguly" style="height: 28px;">
+            </a>
+            <a href="/" class="font-black uppercase text-[10px] tracking-widest hover:text-[#df5a48] transition-colors">
+                ← Back to Home
+            </a>
+        </div>
+    </header>
+
+    <!-- MAIN -->
+    <main>
+        <div class="flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
+
+            <!-- LEFT: FORM -->
+            <div class="flex-1 lg:w-8/12 p-8 lg:p-16 flex flex-col justify-center" style="border-right: 1px solid var(--dark);">
+
+                <!-- FORM STATE -->
+                <div id="form-state">
+                    <div id="save-badge" class="hidden mb-6 inline-block" style="background: var(--accent); color: white; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; font-size: 9px; padding: 0.4rem 0.875rem;">
+                        ★ Property ready to save
+                    </div>
+
+                    <h1 class="font-heading text-4xl lg:text-6xl mb-4" style="color: var(--dark);">
+                        CREATE<br>ACCOUNT
+                    </h1>
+                    <p class="text-sm font-bold opacity-60 mb-10" style="max-width: 440px;">
+                        We'll send a magic link to your email — no password needed.
+                    </p>
+
+                    <div style="max-width: 440px;">
+                        <label class="block font-black uppercase text-[10px] tracking-widest mb-2">Email Address</label>
+                        <input id="signup-email" type="email" class="modal-input" placeholder="you@example.com"
+                               onkeydown="if(event.key==='Enter') sendMagicLink()">
+                        <p id="email-error" class="error-msg hidden"></p>
+
+                        <button onclick="sendMagicLink()" id="send-btn" class="btn-star mt-6">
+                            Send Magic Link →
+                        </button>
+                    </div>
+
+                    <p class="mt-8 text-[11px] opacity-40 font-bold" style="max-width: 440px;">
+                        By creating an account you agree to our terms. We never share your data.
+                    </p>
+                </div>
+
+                <!-- SUCCESS STATE -->
+                <div id="success-state" class="hidden" style="max-width: 440px;">
+                    <div class="mb-6" style="font-size: 3rem;">✉</div>
+                    <h2 class="font-heading text-3xl lg:text-5xl mb-4">CHECK YOUR INBOX</h2>
+                    <p class="font-bold opacity-60 mb-2 text-sm">We sent a magic link to:</p>
+                    <p id="success-email" class="font-black text-lg mb-8" style="color: var(--accent);"></p>
+                    <p class="text-sm opacity-50 mb-6">Click the link in the email to sign in. Check your spam folder if you don't see it.</p>
+                    <button onclick="resendLink()" id="resend-btn" class="btn-star" style="background: var(--dark);">
+                        Resend Magic Link
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT: BENEFITS -->
+            <div class="lg:w-4/12 p-8 lg:p-12 flex flex-col justify-center" style="background: var(--dark); color: var(--bg);">
+                <h3 class="font-heading text-2xl lg:text-3xl mb-8" style="color: var(--accent);">
+                    WITH AN ACCOUNT
+                </h3>
+                <ul class="space-y-6">
+                    <li class="flex gap-4">
+                        <span class="font-heading text-xl" style="color: var(--accent); flex-shrink: 0;">01</span>
+                        <div>
+                            <p class="font-black uppercase text-[10px] tracking-widest mb-1">Track Registration Status</p>
+                            <p class="text-xs opacity-50">Monitor pending → in progress → registered for each property.</p>
+                        </div>
+                    </li>
+                    <li class="flex gap-4">
+                        <span class="font-heading text-xl" style="color: var(--accent); flex-shrink: 0;">02</span>
+                        <div>
+                            <p class="font-black uppercase text-[10px] tracking-widest mb-1">Save Compliance Reports</p>
+                            <p class="text-xs opacity-50">Your PDF reports and compliance data, always accessible.</p>
+                        </div>
+                    </li>
+                    <li class="flex gap-4">
+                        <span class="font-heading text-xl" style="color: var(--accent); flex-shrink: 0;">03</span>
+                        <div>
+                            <p class="font-black uppercase text-[10px] tracking-widest mb-1">Deadline Reminders</p>
+                            <p class="text-xs opacity-50">Get notified before the May 20, 2026 EU deadline.</p>
+                        </div>
+                    </li>
+                    <li class="flex gap-4">
+                        <span class="font-heading text-xl" style="color: var(--accent); flex-shrink: 0;">04</span>
+                        <div>
+                            <p class="font-black uppercase text-[10px] tracking-widest mb-1">Free — 1 Property</p>
+                            <p class="text-xs opacity-50">Upgrade to Pro for unlimited properties and agency tools.</p>
+                        </div>
+                    </li>
+                </ul>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.15);" class="mt-10 pt-8">
+                    <p class="font-black uppercase text-[10px] tracking-widest opacity-40 mb-2">Free plan includes</p>
+                    <p class="text-sm font-bold" style="color: var(--bg);">1 property · PDF reports · Status tracking · Deadline alerts</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL  = 'https://cgatzulpumyygjbazjqk.supabase.co';
+        const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnYXR6dWxwdW15eWdqYmF6anFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0Njk0OTMsImV4cCI6MjA4ODA0NTQ5M30.ybfIp7WvGAqy7C1Odi2Vpna9-8xsOdLHtYu2pcB_CNc';
+        const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+        const params = new URLSearchParams(window.location.search);
+        const saveMode = params.get('save') === 'true';
+
+        // Show badge if came from Save & Track
+        if (saveMode) {
+            document.getElementById('save-badge').classList.remove('hidden');
+        }
+
+        // If already logged in, redirect to dashboard
+        sbClient.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                window.location.href = '/dashboard.html';
+            }
+        });
+
+        // Handle auth state change (magic link callback)
+        sbClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+                window.location.href = '/dashboard.html';
+            }
+        });
+
+        async function sendMagicLink() {
+            const emailEl = document.getElementById('signup-email');
+            const errorEl = document.getElementById('email-error');
+            const btn     = document.getElementById('send-btn');
+            const email   = emailEl.value.trim();
+
+            errorEl.classList.add('hidden');
+
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+                errorEl.textContent = 'Please enter a valid email address';
+                errorEl.classList.remove('hidden');
+                emailEl.focus();
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Sending…';
+
+            const { error } = await sbClient.auth.signInWithOtp({
+                email,
+                options: { emailRedirectTo: window.location.origin + '/dashboard.html' }
+            });
+
+            if (error) {
+                errorEl.textContent = error.message || 'Something went wrong. Try again.';
+                errorEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = 'Send Magic Link →';
+                return;
+            }
+
+            document.getElementById('form-state').classList.add('hidden');
+            document.getElementById('success-state').classList.remove('hidden');
+            document.getElementById('success-email').textContent = email;
+        }
+
+        async function resendLink() {
+            const email = document.getElementById('success-email').textContent;
+            const btn   = document.getElementById('resend-btn');
+            if (!email) return;
+            btn.disabled = true;
+            btn.textContent = 'Sending…';
+            await sbClient.auth.signInWithOtp({
+                email,
+                options: { emailRedirectTo: window.location.origin + '/dashboard.html' }
+            });
+            btn.textContent = '✓ Sent!';
+            setTimeout(() => { btn.textContent = 'Resend Magic Link'; btn.disabled = false; }, 4000);
+        }
+    </script>
+</body>
+</html>

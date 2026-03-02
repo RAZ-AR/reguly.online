@@ -89,6 +89,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Special+Gothic+Expanded+One&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         :root {
             --accent: #df5a48;
@@ -626,6 +627,9 @@
                         <button onclick="sendEmail(this)" class="w-full py-3.5 border border-[#111] font-black uppercase text-[10px] tracking-widest hover:bg-[#111] hover:text-white transition-all">
                             ✉ Send Reminder to My Email
                         </button>
+                        <button id="save-track-btn" onclick="handleSaveAndTrack(this)" class="w-full py-3.5 border border-[#111] font-black uppercase text-[10px] tracking-widest hover:bg-[#111] hover:text-white transition-all">
+                            ★ Save &amp; Track in Dashboard
+                        </button>
                     </div>
                     <button onclick="resetModal()" class="w-full text-center text-[9px] font-black uppercase tracking-widest opacity-30 hover:opacity-70 transition-opacity pt-3">
                         ← Check another address
@@ -825,6 +829,16 @@
             setLang(detectLang());
             startCountdown();
         };
+
+        // =====================
+        // =====================
+        // SUPABASE INIT
+        // =====================
+        const SUPABASE_URL  = 'https://cgatzulpumyygjbazjqk.supabase.co';
+        const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnYXR6dWxwdW15eWdqYmF6anFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0Njk0OTMsImV4cCI6MjA4ODA0NTQ5M30.ybfIp7WvGAqy7C1Odi2Vpna9-8xsOdLHtYu2pcB_CNc';
+        const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+        let lastCheckResult = null;
 
         // =====================
         // ADDRESS CHECK MODAL
@@ -1192,6 +1206,19 @@
                 </div>
             `;
 
+            // Store result for Save & Track
+            lastCheckResult = {
+                country:   document.getElementById('modal-country').value,
+                city,
+                address,
+                district:  selectedDistrict || null,
+                fine:      info.fine,
+                authority: info.authority,
+                portal:    info.portal || null,
+                max_days:  String(effectiveDays),
+                key_rule:  effectiveNote,
+            };
+
             document.getElementById('modal-form').classList.add('hidden');
             document.getElementById('modal-result').classList.remove('hidden');
 
@@ -1512,6 +1539,41 @@
             const steps = getChecklistSteps('', null, 'Varies by city — see report');
             const doc = buildPDF({ steps });
             doc.save('reguly-5steps-checklist.pdf');
+        }
+
+        async function handleSaveAndTrack(btn) {
+            if (!lastCheckResult) return;
+            const original = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = 'Saving…';
+
+            const { data: { session } } = await sbClient.auth.getSession();
+
+            if (session) {
+                const { error } = await sbClient.from('properties').insert({
+                    user_id:   session.user.id,
+                    country:   lastCheckResult.country,
+                    city:      lastCheckResult.city,
+                    address:   lastCheckResult.address,
+                    district:  lastCheckResult.district,
+                    fine:      lastCheckResult.fine,
+                    authority: lastCheckResult.authority,
+                    portal:    lastCheckResult.portal,
+                    max_days:  lastCheckResult.max_days,
+                    key_rule:  lastCheckResult.key_rule,
+                });
+                if (error && error.code === '23514') {
+                    // free plan limit
+                    btn.innerHTML = '⚠ Upgrade to Pro for more properties';
+                    btn.disabled = false;
+                    setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 4000);
+                    return;
+                }
+                window.location.href = '/dashboard.html';
+            } else {
+                sessionStorage.setItem('pendingProperty', JSON.stringify(lastCheckResult));
+                window.location.href = '/signup.html?save=true';
+            }
         }
 
         function sendEmail(btn) {
