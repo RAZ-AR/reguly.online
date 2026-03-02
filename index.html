@@ -230,6 +230,10 @@
         }
         .modal-input:focus { box-shadow: 0 0 0 2px var(--accent); }
         .modal-input:disabled { opacity: 0.35; cursor: not-allowed; }
+        .modal-input.invalid { border-color: #df5a48; box-shadow: 0 0 0 2px rgba(223,90,72,0.25); }
+        .modal-input.valid { border-color: #166534; box-shadow: 0 0 0 2px rgba(22,101,52,0.15); }
+        .field-error { color: #df5a48; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; margin-top: 5px; display: none; }
+        .field-error.show { display: block; }
         .result-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 0.875rem 0; border-bottom: 1px solid var(--dark); gap: 1.5rem; }
         .result-row:last-child { border-bottom: none; }
         .result-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; opacity: 0.45; flex-shrink: 0; padding-top: 3px; }
@@ -595,7 +599,8 @@
                     </div>
                     <div>
                         <label class="text-[9px] font-black uppercase tracking-[0.2em] block mb-2">Email</label>
-                        <input type="email" id="modal-email" placeholder="your@email.com" class="modal-input">
+                        <input type="email" id="modal-email" placeholder="your@email.com" class="modal-input" autocomplete="email" oninput="clearEmailError(this)" onblur="validateEmailField(this)">
+                        <p id="email-error" class="field-error">Enter a valid email address</p>
                     </div>
                     <p id="modal-error" class="hidden text-[#df5a48] font-black text-[9px] uppercase tracking-widest text-center">Please fill in all fields</p>
                     <button onclick="checkAddress()" class="btn-star w-full justify-center mt-2">
@@ -1053,13 +1058,45 @@
             document.getElementById('modal-error').classList.add('hidden');
             document.getElementById('modal-country').value = '';
             document.getElementById('modal-address').value = '';
-            document.getElementById('modal-email').value = '';
+            const emailEl = document.getElementById('modal-email');
+            emailEl.value = '';
+            emailEl.classList.remove('valid', 'invalid');
+            document.getElementById('email-error').classList.remove('show');
             const citySelect = document.getElementById('modal-city');
             citySelect.innerHTML = '<option value="">— Select country first —</option>';
             citySelect.disabled = true;
             citySelect.style.cursor = 'not-allowed';
             selectedDistrict = null;
             acResults = [];
+        }
+
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+        }
+
+        function validateEmailField(input) {
+            const val = input.value.trim();
+            const errEl = document.getElementById('email-error');
+            if (!val) {
+                input.classList.remove('valid', 'invalid');
+                errEl.classList.remove('show');
+            } else if (!isValidEmail(val)) {
+                input.classList.add('invalid');
+                input.classList.remove('valid');
+                errEl.classList.add('show');
+            } else {
+                input.classList.add('valid');
+                input.classList.remove('invalid');
+                errEl.classList.remove('show');
+            }
+        }
+
+        function clearEmailError(input) {
+            if (input.classList.contains('invalid') && isValidEmail(input.value.trim())) {
+                input.classList.remove('invalid');
+                input.classList.add('valid');
+                document.getElementById('email-error').classList.remove('show');
+            }
         }
 
         function updateCities() {
@@ -1085,14 +1122,25 @@
             const country = document.getElementById('modal-country').value;
             const city    = document.getElementById('modal-city').value;
             const address = document.getElementById('modal-address').value.trim();
-            const email   = document.getElementById('modal-email').value.trim();
+            const emailEl = document.getElementById('modal-email');
+            const email   = emailEl.value.trim();
             const errorEl = document.getElementById('modal-error');
 
             if (!country || !city || !address || !email) {
                 errorEl.classList.remove('hidden');
                 return;
             }
+            if (!isValidEmail(email)) {
+                errorEl.classList.add('hidden');
+                emailEl.classList.add('invalid');
+                emailEl.classList.remove('valid');
+                document.getElementById('email-error').classList.add('show');
+                emailEl.focus();
+                return;
+            }
             errorEl.classList.add('hidden');
+            emailEl.classList.add('valid');
+            emailEl.classList.remove('invalid');
 
             const info = (complianceDB[country]?.data[city]) || { fine: '€15,000', note: 'EU regulation applies.', authority: 'Local Authority' };
 
