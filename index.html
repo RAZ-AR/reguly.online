@@ -618,7 +618,14 @@
                     <button onclick="closeModal()" class="font-heading text-4xl leading-none hover:text-[#df5a48] transition-colors" style="width:2.5rem; height:2.5rem; display:flex; align-items:center; justify-content:center;">×</button>
                 </div>
                 <div class="p-6 lg:p-8">
-                    <div id="result-content" class="mb-8"></div>
+                    <div id="result-content" class="mb-6"></div>
+                    <div id="checklist-preview" class="mb-6 hidden">
+                        <div style="border-top: 1px solid var(--dark); padding-top: 1.25rem; margin-bottom: 1rem;">
+                            <p class="font-black uppercase text-[10px] tracking-widest mb-3" style="color: var(--accent);">YOUR REGISTRATION CHECKLIST</p>
+                            <div id="checklist-steps-html" class="space-y-3"></div>
+                            <p class="mt-3 text-[10px] opacity-40 font-bold">↓ Download PDF for the full checklist with all documents and form links</p>
+                        </div>
+                    </div>
                     <div class="space-y-3 mb-4">
                         <button onclick="downloadPDF()" class="btn-star w-full justify-center" style="font-size: 0.875rem;">
                             ↓ Download PDF Report + Checklist
@@ -1069,6 +1076,7 @@
         function resetModal() {
             document.getElementById('modal-form').classList.remove('hidden');
             document.getElementById('modal-result').classList.add('hidden');
+            document.getElementById('checklist-preview').classList.add('hidden');
             document.getElementById('modal-error').classList.add('hidden');
             document.getElementById('modal-country').value = '';
             document.getElementById('modal-address').value = '';
@@ -1206,6 +1214,22 @@
                 </div>
             `;
 
+            // Render inline checklist preview
+            const steps = getChecklistSteps(country, info, effectiveDays, city);
+            const stepsHtml = steps.map((s, i) => `
+                <div style="display:flex; gap:0.75rem; align-items:flex-start;">
+                    <span style="background:var(--dark);color:white;font-weight:900;font-size:9px;padding:2px 6px;flex-shrink:0;margin-top:1px;">0${i+1}</span>
+                    <div style="flex:1;">
+                        <p style="font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:0.15em;margin:0 0 2px;">${s.title}</p>
+                        <p style="font-size:10px;opacity:0.5;margin:0 0 4px;font-weight:700;">${s.deadline}</p>
+                        <p style="font-size:11px;opacity:0.7;margin:0;">${s.items[0]}</p>
+                        ${s.items.length > 1 ? `<p style="font-size:10px;opacity:0.45;margin:2px 0 0;font-style:italic;">+${s.items.length - 1} more steps in PDF</p>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('checklist-steps-html').innerHTML = stepsHtml;
+            document.getElementById('checklist-preview').classList.remove('hidden');
+
             // Store result for Save & Track
             lastCheckResult = {
                 country:   document.getElementById('modal-country').value,
@@ -1238,71 +1262,622 @@
         // =====================
         // PDF GENERATION (jsPDF)
         // =====================
-        function getChecklistSteps(country, info, days) {
-            const extraDocs = {
-                es: ['Cadastral reference (Referencia catastral)', 'Urban compatibility certificate (Informe de compatibilidad urbanistica)', 'Responsible declaration form (Declaracion responsable)'],
-                fr: ['Proof of primary residence (attestation sur l\'honneur)', 'Tax ID (numero fiscal / SIRET if applicable)'],
-                de: ['Registration certificate (Anmeldebestatigung / Meldebestatigung)', 'Property extract (Grundbuchauszug) if applicable'],
-                nl: ['DigiD login for Gemeente online portal', 'Self-occupancy declaration (eigenbewoningsverklaring)', 'Proof of home insurance'],
-                ie: ['PPSN (Irish Personal Public Service Number)', 'Planning permission (if non-principal private residence)'],
+        function getChecklistSteps(country, info, days, city) {
+            city = (city || '').toLowerCase();
+
+            // ── CITY-SPECIFIC CONFIGS ────────────────────────────
+            const cityConfig = {
+                // SPAIN
+                barcelona: {
+                    status: 'WARNING: New HUT licenses are FROZEN in Barcelona since 2017.',
+                    step1: [
+                        'WARNING: New HUT (Habitatge d\'Us Turistic) licenses are frozen city-wide since 2017.',
+                        'Check if you already hold an existing HUT license — only renewals are possible.',
+                        'Verify your license is still valid (5-year validity, must renew before November 2028).',
+                        'If unlicensed: you cannot legally operate a new STR in Barcelona city proper.',
+                        'Alternative: check nearby municipalities outside Barcelona city limits.',
+                    ],
+                    step2: [
+                        'Valid ID or passport (NIE for non-Spanish nationals)',
+                        'Existing HUT license number (if renewing)',
+                        'Property ownership certificate (Nota Simple from Registro de Propiedad)',
+                        'Community of owners (comunidad) approval letter',
+                        'Proof of residence at the property',
+                    ],
+                    step3: [
+                        'Portal: seuelectronica.ajuntament.barcelona.cat/oficinavirtual',
+                        'Log in with Cl@ve or digital certificate (certificat digital)',
+                        'Submit license renewal form before expiry date',
+                        'Update registration with Mossos d\'Esquadra (required by Jan 31, 2025)',
+                        'Get NRA (National Rental Number): visit numeroregistroalquiler.es — mandatory since July 1, 2025',
+                    ],
+                    form: 'HUT License Renewal + NRA Registration',
+                    portal: 'seuelectronica.ajuntament.barcelona.cat/oficinavirtual',
+                    nra: true,
+                },
+                madrid: {
+                    step1: [
+                        'Determine if your property is primary or secondary residence.',
+                        'Get CIVUT certificate from a qualified architect or technical engineer.',
+                        'Obtain 60% community approval: 60% of owners AND 60% participation shares required (since April 3, 2025).',
+                        'Confirm your building zone allows tourist use (check Madrid Urban Plan).',
+                        'Note: entire-home STR requires all of the above; room rental rules differ.',
+                    ],
+                    step2: [
+                        'Valid ID or passport (NIE for non-Spanish nationals)',
+                        'Property deed (Escritura de propiedad)',
+                        'CIVUT certificate from licensed technician',
+                        'Community approval minutes (Acta de la comunidad — 60% vote)',
+                        'Cadastral reference (Referencia catastral) from Catastro.meh.es',
+                        'Proof of habitability certificate (Cedula de habitabilidad)',
+                    ],
+                    step3: [
+                        'STEP 1 — Submit Declaracion Responsable: sede.comunidad.madrid/node/270706',
+                        'STEP 2 — Attach: CIVUT certificate + community approval + property deed',
+                        'STEP 3 — Registration is automatic upon valid submission (no waiting period)',
+                        'STEP 4 — Get NRA number: numeroregistroalquiler.es — mandatory since July 1, 2025',
+                        'Cost: Free. Processing: Instant upon complete submission.',
+                    ],
+                    form: 'Declaracion Responsable de Inicio de Actividad + CIVUT',
+                    portal: 'sede.comunidad.madrid/node/270706',
+                    nra: true,
+                },
+                seville: {
+                    step1: [
+                        'Obtain municipal authorization from Ayuntamiento de Sevilla FIRST.',
+                        'Get 3/5 community of owners approval (3/5 owners + 3/5 shares, since April 2025).',
+                        'Confirm property habitability: obtain Cedula de habitabilidad.',
+                        'Check if property is in a restricted zone (Casco Historico has stricter rules).',
+                        'Get NRA number (mandatory since July 2025): numeroregistroalquiler.es',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Municipal authorization letter from Ayuntamiento de Sevilla',
+                        'Community approval minutes (3/5 vote)',
+                        'Habitability certificate (Cedula de habitabilidad)',
+                        'Liability insurance policy (Seguro de responsabilidad civil)',
+                        'Cadastral reference (Referencia catastral)',
+                    ],
+                    step3: [
+                        'STEP 1 — Junta de Andalucia Tourism Registry: juntadeandalucia.es/turismo',
+                        'STEP 2 — Submit Declaracion Responsable with all documents',
+                        'STEP 3 — Wait up to 30 days for RTVA registration number',
+                        'STEP 4 — Register at NRA: numeroregistroalquiler.es',
+                        'Cost: Free. Processing: up to 30 days.',
+                    ],
+                    form: 'Declaracion Responsable — Junta de Andalucia Tourism Registry',
+                    portal: 'juntadeandalucia.es/turismo',
+                    nra: true,
+                },
+                malaga: {
+                    step1: [
+                        'WARNING: Malaga city has a registration moratorium since August 2025 — no NEW licenses for Malaga city proper.',
+                        'Check if your property is inside Malaga city limits or in the province (province is still open).',
+                        'If in the province: obtain municipal authorization and Cedula de habitabilidad.',
+                        'Get 3/5 community approval (owners + participation shares).',
+                        'Get NRA number: numeroregistroalquiler.es — mandatory since July 1, 2025.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Municipal authorization letter',
+                        'Community approval minutes (3/5 vote)',
+                        'Habitability certificate (Cedula de habitabilidad)',
+                        'Liability insurance policy',
+                        'Cadastral reference',
+                    ],
+                    step3: [
+                        'STEP 1 — Verify your property is NOT in Malaga city (moratorium applies)',
+                        'STEP 2 — Junta de Andalucia portal: juntadeandalucia.es/turismo',
+                        'STEP 3 — Submit Declaracion Responsable with all attachments',
+                        'STEP 4 — Get NRA number: numeroregistroalquiler.es',
+                        'Cost: Free. Processing: up to 30 days.',
+                    ],
+                    form: 'Declaracion Responsable — Junta de Andalucia',
+                    portal: 'juntadeandalucia.es/turismo',
+                    nra: true,
+                },
+                valencia: {
+                    step1: [
+                        'Note: Maximum 10 consecutive days per contract allowed (since August 2024).',
+                        'Obtain urban compatibility certificate (Informe de compatibilidad urbanistica) from Valencia city council.',
+                        'Get mandatory community of owners approval (since April 2025).',
+                        'Confirm you hold liability insurance.',
+                        'Get NRA number: numeroregistroalquiler.es — mandatory since July 1, 2025.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Urban compatibility certificate from Valencia council',
+                        'Community approval document',
+                        'Liability insurance (Seguro de responsabilidad civil)',
+                        'Habitability certificate',
+                        'Property deed or lease',
+                    ],
+                    step3: [
+                        'STEP 1 — Portal: turisme.gva.es (Generalitat Valenciana)',
+                        'STEP 2 — Submit NRU registration form with all documents',
+                        'STEP 3 — Receive NRU (Numero de Registro de Uso Turistico)',
+                        'STEP 4 — Get NRA number: numeroregistroalquiler.es',
+                        'Cost: Variable. Processing: 30-45 days.',
+                    ],
+                    form: 'NRU — Numero de Registro de Uso Turistico',
+                    portal: 'turisme.gva.es',
+                    nra: true,
+                },
+                alicante: {
+                    step1: [
+                        'WARNING: Alicante city centre and Playa San Juan have suspended new licenses.',
+                        'Check if your property is in a restricted zone before proceeding.',
+                        'Future limit: 0.3 licenses per inhabitant (enforced from 2027).',
+                        'If eligible: obtain urban compatibility certificate from local council.',
+                        'Community approval mandatory (since April 2025).',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Urban compatibility certificate',
+                        'Community approval document',
+                        'Liability insurance',
+                        'Habitability certificate',
+                        'Property deed',
+                    ],
+                    step3: [
+                        'STEP 1 — Confirm your zone is not under suspension',
+                        'STEP 2 — Submit via turisme.gva.es (Generalitat Valenciana)',
+                        'STEP 3 — Receive NRU number upon approval',
+                        'STEP 4 — Get NRA number: numeroregistroalquiler.es',
+                        'Cost: Variable. Processing: 30-45 days.',
+                    ],
+                    form: 'NRU — Generalitat Valenciana',
+                    portal: 'turisme.gva.es',
+                    nra: true,
+                },
+                // FRANCE
+                paris: {
+                    step1: [
+                        'Determine if this is your primary residence (you live here 8+ months/year) — max 120 nights/year.',
+                        'Secondary residences require prior authorisation from Paris city hall — much stricter.',
+                        'Check your arrondissement for specific local rules (some stricter than others).',
+                        'Confirm building rules: check your lease or co-ownership agreement allows STR.',
+                        'Obtain your SIRET number if renting as a business (micro-entrepreneur).',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Proof of primary residence (attestation sur l\'honneur + utility bill)',
+                        'Tax ID (numero fiscal)',
+                        'SIRET number (if applicable — micro-entrepreneur status)',
+                        'Building co-ownership rules document (reglement de copropriete)',
+                        'Landlord authorisation (if renting)',
+                    ],
+                    step3: [
+                        'FORM: Download CERFA n°14004*04 from service-public.fr',
+                        'URL: formulaires.service-public.gouv.fr/gf/cerfa_14004_04.do',
+                        'Complete and sign the form with your property details',
+                        'Submit to your local Paris Mairie (town hall) in person or by post',
+                        'Receive your 13-digit declaration number — display it on all listings',
+                    ],
+                    form: 'CERFA n°14004*04 — Declaration en mairie des meubles de tourisme',
+                    portal: 'formulaires.service-public.gouv.fr/gf/cerfa_14004_04.do',
+                    nra: false,
+                },
+                lyon: {
+                    step1: [
+                        'Lyon applies the 90 days/year maximum for primary residences (since 2025).',
+                        'Check if your property is in a zone with prior authorisation requirement.',
+                        'Confirm you are the primary resident (registered at this address).',
+                        'If secondary residence: prior authorisation from Mairie de Lyon required.',
+                        'Check your building\'s co-ownership rules allow short-term rental.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Proof of primary residence at the property',
+                        'Tax ID (numero fiscal)',
+                        'Building rules document',
+                        'Landlord authorisation (if applicable)',
+                    ],
+                    step3: [
+                        'FORM: CERFA n°14004*04 — Download at service-public.fr',
+                        'URL: formulaires.service-public.gouv.fr/gf/cerfa_14004_04.do',
+                        'Complete form and submit to Mairie de Lyon',
+                        'Receive 13-digit declaration number',
+                        'Display declaration number on Airbnb, Booking.com and all platforms',
+                    ],
+                    form: 'CERFA n°14004*04',
+                    portal: 'formulaires.service-public.gouv.fr/gf/cerfa_14004_04.do',
+                    nra: false,
+                },
+                nice: {
+                    step1: [
+                        'Nice: max 120 nights/year for primary residence.',
+                        'Prior authorisation required for secondary residences.',
+                        'Check Nice city\'s specific zone restrictions (Vieille Ville stricter).',
+                        'Confirm your building co-ownership rules permit short-term rental.',
+                        'Tourist tax (taxe de sejour) must be collected and remitted monthly.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Proof of primary residence',
+                        'Tax ID (numero fiscal)',
+                        'Building co-ownership rules',
+                    ],
+                    step3: [
+                        'FORM: CERFA n°14004*04 — service-public.fr',
+                        'Submit to Mairie de Nice',
+                        'Receive 13-digit declaration number',
+                        'Register for taxe de sejour collection at nice.fr',
+                        'Display registration number on all listings',
+                    ],
+                    form: 'CERFA n°14004*04',
+                    portal: 'formulaires.service-public.gouv.fr/gf/cerfa_14004_04.do',
+                    nra: false,
+                },
+                bordeaux: {
+                    step1: [
+                        'Bordeaux: max 120 nights/year for primary residence.',
+                        'Prior authorisation required for secondary residences (change of use).',
+                        'Check Bordeaux Metropole zone rules — historic centre is stricter.',
+                        'Tourist tax collection mandatory: collect from guests and remit to city.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Proof of primary residence',
+                        'Tax ID (numero fiscal)',
+                        'Building authorisation if secondary residence',
+                    ],
+                    step3: [
+                        'FORM: CERFA n°14004*04 — service-public.fr',
+                        'Submit to Mairie de Bordeaux',
+                        'Receive 13-digit declaration number',
+                        'Register for taxe de sejour at bordeaux.fr',
+                        'Display declaration number on all listing platforms',
+                    ],
+                    form: 'CERFA n°14004*04',
+                    portal: 'formulaires.service-public.gouv.fr/gf/cerfa_14004_04.do',
+                    nra: false,
+                },
+                marseille: {
+                    step1: [
+                        'Marseille: max 90 nights/year for primary residences (stricter enforcement since 2025).',
+                        'Prior authorisation required for secondary residences.',
+                        'Check arrondissement-level rules — 1st and 7th arrondissements strictest.',
+                        'Tourist tax mandatory: collect from all guests and pay monthly.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Proof of primary residence',
+                        'Tax ID (numero fiscal)',
+                        'Building co-ownership authorisation',
+                    ],
+                    step3: [
+                        'FORM: CERFA n°14004*04 — service-public.fr',
+                        'Submit to Mairie de Marseille (13th arrondissement for most areas)',
+                        'Receive 13-digit declaration number',
+                        'Register for taxe de sejour collection',
+                        'Display number on all platforms',
+                    ],
+                    form: 'CERFA n°14004*04',
+                    portal: 'formulaires.service-public.gouv.fr/gf/cerfa_14004_04.do',
+                    nra: false,
+                },
+                // GERMANY
+                berlin: {
+                    step1: [
+                        'STRICT: Zweckentfremdungsverbot (anti-misuse law) — entire-home rental max 90 days/year ONLY if you live there.',
+                        'If you do not live at the property: rental of entire home is illegal without special exemption.',
+                        'Room rental (while you are present) is generally allowed without day limit.',
+                        'Identify your district (Bezirk) — each district enforces rules independently.',
+                        'Check if your building is under Milieuschutz (protected neighbourhood) — stricter rules apply.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Registration certificate (Anmeldebescheinigung / Meldebestaetigung) proving you live there',
+                        'Property ownership or tenancy agreement (Mietvertrag)',
+                        'Landlord written permission (if tenant)',
+                        'Property extract (Grundbuchauszug) if owner',
+                        'Building insurance documents',
+                    ],
+                    step3: [
+                        'PORTAL: berlin.de/sen/sbw/service/formularcenter/bereich-wohnen/zweckentfremdungsverbot',
+                        'Apply for Genehmigung (permit) at your district\'s Bezirksamt',
+                        'Submit: Anmeldebescheinigung + tenancy/ownership proof + landlord permission',
+                        'Receive Registriernummer (registration number) from Bezirksamt',
+                        'Display Registriernummer on ALL listings — mandatory from May 2026',
+                    ],
+                    form: 'Antrag auf Genehmigung nach Zweckentfremdungsverbot',
+                    portal: 'berlin.de/sen/sbw/service/formularcenter/bereich-wohnen/zweckentfremdungsverbot',
+                    nra: false,
+                },
+                munich: {
+                    step1: [
+                        'Munich: max 56 days (8 weeks) per year for entire apartments.',
+                        'Exceeding 56 days without permit risks fines up to €500,000.',
+                        'Room rental (while you live there) has more flexibility.',
+                        'Obtain Wohnraumschutznummer (housing protection number) from district office.',
+                        'Tourist tax (Kulturfoerderabgabe): €1-3 per person per night — collect and pay monthly.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Registration certificate (Anmeldebescheinigung)',
+                        'Property deed or tenancy agreement',
+                        'Landlord permission (if renting)',
+                        'Property extract (Grundbuchauszug) if owner',
+                    ],
+                    step3: [
+                        'Apply at your district Kreisverwaltungsreferat (KVR) office',
+                        'Portal: muenchen.de/rathaus/Stadtverwaltung/Kreisverwaltungsreferat.html',
+                        'Request Wohnraumschutznummer (housing protection number)',
+                        'Submit registration proof + property documents',
+                        'Display number on Airbnb and all platforms — track your 56-day limit carefully',
+                    ],
+                    form: 'Wohnraumschutz Registration — KVR Munich',
+                    portal: 'muenchen.de/rathaus/Stadtverwaltung/Kreisverwaltungsreferat.html',
+                    nra: false,
+                },
+                hamburg: {
+                    step1: [
+                        'Hamburg: max 55 days per year without special permission.',
+                        'Exceeding 55 days requires a Zweckentfremdungsgenehmigung permit.',
+                        'Apply at your district Bezirksamt for your registration number.',
+                        'Tourist tax: €2 per person per night — collect from guests and pay monthly.',
+                        'Registration number mandatory in all listing advertisements from May 2026.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Registration certificate (Anmeldebescheinigung)',
+                        'Property ownership or tenancy agreement',
+                        'Landlord permission (if renting)',
+                    ],
+                    step3: [
+                        'Apply at your local Bezirksamt (Altona, Mitte, Eimsbuettel, etc.)',
+                        'Portal: hamburg.de — search for "Kurzzeitvermietung Genehmigung"',
+                        'Submit registration certificate + property documents',
+                        'Receive Registriernummer for listing display',
+                        'Track your 55-day limit — keep a rental log',
+                    ],
+                    form: 'Zweckentfremdungsgenehmigung — Bezirksamt Hamburg',
+                    portal: 'hamburg.de',
+                    nra: false,
+                },
+                frankfurt: {
+                    step1: [
+                        'Frankfurt: 60-90 days/year limit depending on district.',
+                        'Apply at Stadtplanungsamt Frankfurt for registration number.',
+                        'Tourist tax: €2-4 per person per night — collect and remit monthly.',
+                        'Check your building\'s house rules and landlord approval.',
+                        'Registration number mandatory on all listing platforms from May 2026.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'Registration certificate (Anmeldebescheinigung)',
+                        'Property ownership or tenancy agreement',
+                        'Landlord permission (if renting)',
+                    ],
+                    step3: [
+                        'Contact Stadtplanungsamt Frankfurt am Main',
+                        'Portal: frankfurt.de/stadtplanung',
+                        'Submit registration certificate + property documents',
+                        'Confirm your district day limit (60 or 90 days)',
+                        'Display registration number on all listing platforms',
+                    ],
+                    form: 'Kurzzeitvermietung Registration — Stadtplanungsamt Frankfurt',
+                    portal: 'frankfurt.de/stadtplanung',
+                    nra: false,
+                },
+                // NETHERLANDS
+                amsterdam: {
+                    step1: [
+                        'Amsterdam: STRICT — max 30 nights/year for vacation rental.',
+                        'You must be registered (BRP) at the property as your primary residence.',
+                        'VvE (homeowners association) permission required — check your deed.',
+                        'B&B permits available (room rental, host present) — different rules.',
+                        'Report ALL rentals via toeristischeverhuur.nl — mandatory for each booking.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'DigiD login (Dutch digital identity — get at digid.nl)',
+                        'BRP registration extract (Uittreksel BRP) — proves you live there',
+                        'VvE permission letter (homeowners association)',
+                        'Property deed (Akte van levering) or rental agreement',
+                        'Home insurance policy',
+                    ],
+                    step3: [
+                        'PERMIT APPLICATION: amsterdam.nl/wonen-bouwen-verbouwen/woonruimte-verhuren/vergunning-vakantieverhuur-aanvragen',
+                        'Log in with DigiD and apply for Vakantieverhuur permit (cost: EUR 73.30)',
+                        'B&B permit costs EUR 552.40 — apply separately if renting rooms',
+                        'Register each booking at: toeristischeverhuur.nl (mandatory — every rental)',
+                        'Permit valid 12 months. Max 30 nights/year total across all bookings.',
+                    ],
+                    form: 'Vergunning Vakantieverhuur — Gemeente Amsterdam (EUR 73.30)',
+                    portal: 'amsterdam.nl/wonen-bouwen-verbouwen/woonruimte-verhuren/vergunning-vakantieverhuur-aanvragen',
+                    nra: false,
+                },
+                rotterdam: {
+                    step1: [
+                        'Rotterdam: register via national tourism portal.',
+                        'Registration number mandatory on all advertisements.',
+                        'You must be registered (BRP) at the property.',
+                        'Check building co-ownership (VvE) rules for permission.',
+                        'Tourist tax must be collected from guests and paid to municipality.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'DigiD login (digid.nl)',
+                        'BRP registration extract',
+                        'VvE permission (if applicable)',
+                        'Property deed or rental agreement',
+                    ],
+                    step3: [
+                        'PORTAL: toeristischeverhuur.nl — national tourist rental registry',
+                        'Log in with DigiD and register your property',
+                        'Receive registration number (free)',
+                        'Display registration number on Airbnb, Booking.com and all platforms',
+                        'Report each rental on toeristischeverhuur.nl',
+                    ],
+                    form: 'Toeristisch Verhuur Registratie — toeristischeverhuur.nl (Free)',
+                    portal: 'toeristischeverhuur.nl',
+                    nra: false,
+                },
+                'the hague': {
+                    step1: [
+                        'The Hague: permit required for holiday rental.',
+                        'Cost: EUR 131.20, valid for 3 years.',
+                        'Registration number mandatory on all promotional materials.',
+                        'You must be registered (BRP) at the property.',
+                        'Check VvE (homeowners association) rules.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'DigiD login',
+                        'BRP registration extract',
+                        'VvE permission (if applicable)',
+                        'Property deed or rental agreement',
+                    ],
+                    step3: [
+                        'Apply for holiday rental permit at Gemeente Den Haag',
+                        'Portal: denhaag.nl — search "vakantieverhuur vergunning"',
+                        'Email support: vakantieverhuur@denhaag.nl',
+                        'Cost: EUR 131.20 (valid 3 years)',
+                        'Display permit number on all listings',
+                    ],
+                    form: 'Vakantieverhuur Vergunning — Gemeente Den Haag (EUR 131.20)',
+                    portal: 'denhaag.nl',
+                    nra: false,
+                },
+                // IRELAND
+                dublin: {
+                    step1: [
+                        'Ireland: Short-Term Tourism Let Register (STLR) launches May 20, 2026.',
+                        'ALL hosts renting for up to 21 nights must register.',
+                        'Primary Private Residence (PPR): up to 90 days unrestricted; beyond 90 days requires planning permission.',
+                        'Non-PPR (secondary home): planning permission required regardless.',
+                        'Start gathering documents now — registration opens May 20, 2026.',
+                    ],
+                    step2: [
+                        'Valid ID or passport (Irish passport or PPSN)',
+                        'PPSN (Personal Public Service Number) — mandatory',
+                        'Proof of property ownership or tenancy',
+                        'Planning permission (if non-PPR or over 90 days)',
+                        'Planning compliance declaration',
+                    ],
+                    step3: [
+                        'PORTAL: failteireland.ie/registration-and-grading/short-term-letting-register-(STLR) (opens May 20, 2026)',
+                        'Create account on Failte Ireland online portal',
+                        'Complete 5-minute registration form',
+                        'Declare planning compliance (PPR status)',
+                        'Receive STL registration number — renew annually',
+                    ],
+                    form: 'STL Registration — Failte Ireland Short-Term Tourism Let Register',
+                    portal: 'failteireland.ie/registration-and-grading/short-term-letting-register',
+                    nra: false,
+                },
+                cork: {
+                    step1: [
+                        'Ireland: STLR (Short-Term Tourism Let Register) opens May 20, 2026 — register from that date.',
+                        'Home sharing (renting a room while present): unrestricted.',
+                        'Entire PPR: up to 90 days/year allowed; more than 90 days requires planning permission.',
+                        'Non-PPR (secondary property): planning permission required.',
+                        'Get PPSN ready — required for registration.',
+                    ],
+                    step2: [
+                        'Valid ID or passport',
+                        'PPSN (Personal Public Service Number)',
+                        'Proof of property ownership',
+                        'Planning permission (if non-PPR or over 90 days)',
+                    ],
+                    step3: [
+                        'PORTAL: failteireland.ie/registration-and-grading/short-term-letting-register (opens May 20, 2026)',
+                        'Register online — takes approx. 5 minutes',
+                        'Declare planning compliance',
+                        'Receive STL registration number',
+                        'Renew registration annually',
+                    ],
+                    form: 'STL Registration — Failte Ireland STLR',
+                    portal: 'failteireland.ie/registration-and-grading/short-term-letting-register',
+                    nra: false,
+                },
             };
-            const docs = extraDocs[country] || ['Valid photo ID or passport', 'Property ownership or lease document'];
-            const portal = info?.portal ? info.portal : (info?.authority || 'local authority portal');
+
+            const cfg = cityConfig[city] || {};
+
+            // Default step1 items if no city-specific config
+            const step1Items = cfg.step1 || [
+                'Confirm whether your property requires registration',
+                'Identify your rental type: entire apartment, room, or house',
+                'Determine: primary residence (you live there) or secondary?',
+                'Note your city day limit: ' + (days || 'check locally'),
+                'Check local authority website for zone-specific restrictions',
+            ];
+
+            // Default step2 docs
+            const defaultDocs = {
+                es: ['Valid ID or passport', 'Cadastral reference (Referencia catastral)', 'Urban compatibility certificate', 'Responsible declaration form', 'Community of owners approval'],
+                fr: ['Valid ID or passport', 'Proof of primary residence (attestation sur l\'honneur)', 'Tax ID (numero fiscal)'],
+                de: ['Valid ID or passport', 'Registration certificate (Anmeldebescheinigung)', 'Property deed or tenancy agreement', 'Landlord permission if renting'],
+                nl: ['Valid ID or passport', 'DigiD login (digid.nl)', 'BRP registration extract', 'VvE permission letter'],
+                ie: ['Valid ID or passport', 'PPSN (Irish Personal Public Service Number)', 'Planning permission (if non-PPR)'],
+            };
+            const step2Items = cfg.step2 || defaultDocs[country] || ['Valid photo ID or passport', 'Property ownership or lease document'];
+
+            // Default step3
+            const portalUrl = cfg.portal || info?.portal || info?.authority || 'local authority portal';
+            const step3Items = cfg.step3 || [
+                'Visit the official registration portal: ' + portalUrl,
+                'Create an account and complete the application form',
+                'Upload all required documents',
+                'Submit and save your registration number',
+                'Registration number must appear on all your listings',
+            ];
+
+            // NRA step for Spain
+            const spainNRA = cfg.nra ? [
+                'MANDATORY (since July 1, 2025): Get your NRA number at numeroregistroalquiler.es',
+                'NRA (Numero de Registro de Alquiler) is required for ALL Spanish STR platforms',
+                'Annual reporting to NRA: Feb 1 - Mar 2 each year for previous year activity',
+            ] : [];
+
+            // Form name
+            const formName = cfg.form || (info?.portal ? 'Registration form at ' + info.portal : 'Local authority registration form');
 
             return [
                 {
-                    title: 'CHECK YOUR STATUS',
+                    title: 'UNDERSTAND YOUR RULES',
                     deadline: 'Do this now',
-                    items: [
-                        'Confirm whether your property requires registration',
-                        'Identify your rental type: entire apartment, room, or house',
-                        'Determine: primary residence (you live there) or secondary?',
-                        'Note your city day limit: ' + (days || 'check locally'),
-                        'Clarify: tourism licence required or simple registration?',
-                    ]
+                    items: step1Items,
                 },
                 {
                     title: 'GATHER REQUIRED DOCUMENTS',
-                    deadline: 'By April 1',
-                    items: [
-                        'Valid passport or national ID (must be current)',
-                        'Property ownership deed or lease agreement',
-                        'Proof of residence at the property (utility bill or certificate)',
-                        ...docs,
-                    ]
+                    deadline: 'By April 1, 2026',
+                    items: step2Items,
                 },
                 {
-                    title: 'REGISTER WITH LOCAL AUTHORITY',
-                    deadline: 'By May 1',
+                    title: 'SUBMIT REGISTRATION',
+                    deadline: 'By May 1, 2026',
                     items: [
-                        'Visit the official portal: ' + portal,
-                        'Create an account on the registration portal',
-                        'Complete the application form and upload all documents',
-                        'Pay registration fee if required (Spain ~180 EUR, Netherlands ~50 EUR)',
-                        'Save your Registration Number (NRU / Reg.Nr. / Reference)',
-                    ]
+                        'Form to use: ' + formName,
+                        ...step3Items,
+                        ...spainNRA,
+                    ],
                 },
                 {
                     title: 'UPDATE ALL LISTING PLATFORMS',
-                    deadline: 'By May 20',
+                    deadline: 'By May 20, 2026',
                     items: [
-                        'Add registration number to your Airbnb listing title or description',
-                        'Add registration number to your Booking.com listing',
-                        'Update all other platforms: VRBO, Expedia, HomeAway, etc.',
-                        'Screenshot each updated listing for your records',
-                    ]
+                        'Add your registration number to Airbnb listing (Account > Listings > Edit)',
+                        'Add registration number to Booking.com property page',
+                        'Update VRBO, Expedia, HomeAway and any other platforms you use',
+                        'Screenshot each updated listing and save as PDF proof',
+                        'Platforms must verify and display your number or delist you after May 20',
+                    ],
                 },
                 {
-                    title: 'SET UP MONTHLY REPORTING',
-                    deadline: 'Ongoing',
+                    title: 'ONGOING COMPLIANCE',
+                    deadline: 'Monthly / Annual',
                     items: [
-                        'Find your city monthly reporting portal and deadline',
-                        'Report monthly: nights rented, income, anonymised guest count',
-                        'Store all documents for minimum 5 years (EU regulation)',
-                        'Set a recurring reminder on the 1st of each month',
-                        'Subscribe to regulation updates at reguly.online',
-                    ]
-                }
+                        'Track your rental days — stay within your city limit (' + (days || 'check locally') + ')',
+                        'Collect tourist tax from guests if required by your city',
+                        'Report rental activity as required (monthly in NL/DE, annually in Spain)',
+                        'Store all guest records and contracts for minimum 5 years (EU requirement)',
+                        'Renew your registration before expiry — set a calendar reminder now',
+                    ],
+                },
             ];
         }
 
@@ -1528,7 +2103,7 @@
                 note: effectiveNote,
                 portal: info.portal || '',
                 docs: countryDocs[country] || ['Valid ID or passport', 'Property ownership document'],
-                steps: getChecklistSteps(country, info, effectiveDays),
+                steps: getChecklistSteps(country, info, effectiveDays, city),
             };
 
             const doc = buildPDF(config);
