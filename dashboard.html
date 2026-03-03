@@ -129,6 +129,41 @@
 
     </main>
 
+    <!-- WAITLIST MODAL -->
+    <div id="waitlist-modal" class="overlay hidden">
+        <div class="modal-box">
+            <div class="flex items-center justify-between p-6" style="border-bottom:1px solid var(--dark); background:var(--dark);">
+                <div>
+                    <p id="wl-plan-label" class="text-[9px] font-black uppercase tracking-widest mb-1" style="color:var(--accent);"></p>
+                    <h3 id="wl-title" class="font-heading text-2xl" style="color:white;"></h3>
+                </div>
+                <button onclick="closeWaitlist()" class="font-heading text-3xl leading-none hover:text-[#df5a48] transition-colors" style="color:white;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;">×</button>
+            </div>
+            <!-- form -->
+            <div id="wl-form-state" class="p-6 space-y-4">
+                <p id="wl-sub" class="text-sm font-bold opacity-60"></p>
+                <div>
+                    <label id="wl-name-label" class="block font-black uppercase text-[10px] tracking-widest mb-2"></label>
+                    <input id="wl-name" type="text" class="modal-input" autocomplete="name">
+                </div>
+                <div>
+                    <label id="wl-email-label" class="block font-black uppercase text-[10px] tracking-widest mb-2"></label>
+                    <input id="wl-email" type="email" class="modal-input" autocomplete="email" onkeydown="if(event.key==='Enter') submitWaitlist()">
+                    <p id="wl-email-error" style="color:var(--accent);font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;margin-top:5px;display:none;"></p>
+                </div>
+                <button onclick="submitWaitlist()" id="wl-submit-btn" class="btn-star w-full justify-center">
+                    <span id="wl-cta-text"></span>
+                </button>
+            </div>
+            <!-- success -->
+            <div id="wl-success-state" class="hidden p-8 text-center">
+                <div style="font-size:3rem;margin-bottom:1rem;">✓</div>
+                <h4 id="wl-success-title" class="font-heading text-2xl mb-4"></h4>
+                <p id="wl-success-text" class="text-sm font-bold opacity-60"></p>
+            </div>
+        </div>
+    </div>
+
     <!-- STATUS UPDATE MODAL -->
     <div id="status-modal" class="overlay hidden">
         <div class="modal-box">
@@ -353,9 +388,116 @@
             window.location.href = '/';
         }
 
-        // ── Upgrade (stub) ────────────────────────────────
+        // ── Language detection ────────────────────────────
+        const wlT = {
+            en: {
+                plan_pro: 'HOST PLUS — €29/mo', plan_agency: 'AGENCY — €49/mo',
+                title: 'JOIN THE WAITLIST', sub: 'Pro & Agency plans are coming soon. Leave your details and we\'ll notify you first.',
+                name_label: 'Your Name', name_ph: 'John Smith',
+                email_label: 'Email Address', email_ph: 'you@example.com',
+                cta: 'Notify Me →', email_err: 'Please enter a valid email address',
+                ok_title: 'YOU\'RE ON THE LIST', ok_text: 'We\'ll email you as soon as Pro launches. Thank you!',
+            },
+            es: {
+                plan_pro: 'HOST PLUS — €29/mes', plan_agency: 'AGENCIA — €49/mes',
+                title: 'ÚNETE A LA LISTA', sub: 'Los planes Pro y Agencia llegan pronto. Déjanos tus datos y te avisaremos primero.',
+                name_label: 'Tu nombre', name_ph: 'Juan García',
+                email_label: 'Correo electrónico', email_ph: 'tu@ejemplo.com',
+                cta: 'Avisarme →', email_err: 'Por favor introduce un email válido',
+                ok_title: 'YA ESTÁS EN LA LISTA', ok_text: 'Te escribiremos en cuanto lance el plan Pro. ¡Gracias!',
+            },
+            de: {
+                plan_pro: 'HOST PLUS — €29/Monat', plan_agency: 'AGENTUR — €49/Monat',
+                title: 'WARTELISTE BEITRETEN', sub: 'Pro- und Agentur-Pläne kommen bald. Hinterlassen Sie Ihre Daten – wir benachrichtigen Sie als Erste.',
+                name_label: 'Ihr Name', name_ph: 'Max Mustermann',
+                email_label: 'E-Mail-Adresse', email_ph: 'sie@beispiel.de',
+                cta: 'Benachrichtigen →', email_err: 'Bitte gültige E-Mail eingeben',
+                ok_title: 'SIE STEHEN AUF DER LISTE', ok_text: 'Wir schreiben Ihnen, sobald Pro verfügbar ist. Danke!',
+            },
+            fr: {
+                plan_pro: 'HOST PLUS — €29/mois', plan_agency: 'AGENCE — €49/mois',
+                title: 'REJOINDRE LA LISTE D\'ATTENTE', sub: 'Les plans Pro et Agence arrivent bientôt. Laissez vos coordonnées et nous vous préviendrons en premier.',
+                name_label: 'Votre nom', name_ph: 'Jean Dupont',
+                email_label: 'Adresse e-mail', email_ph: 'vous@exemple.fr',
+                cta: 'Me notifier →', email_err: 'Veuillez entrer un e-mail valide',
+                ok_title: 'VOUS ÊTES SUR LA LISTE', ok_text: 'Nous vous enverrons un email dès que Pro est lancé. Merci !',
+            },
+        };
+
+        function detectDashLang() {
+            try { const s = localStorage.getItem('reguly_lang'); if (s) return s; } catch(e) {}
+            const l = (navigator.language || '').toLowerCase();
+            if (l.startsWith('es')) return 'es';
+            if (l.startsWith('de')) return 'de';
+            if (l.startsWith('fr')) return 'fr';
+            return 'en';
+        }
+
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxRvzncwzjvJiQ0z-A1XZw0XEzk_3_-PA1AJaLIY6Ww_eNmr_e39FKOwzCoZH-Z0WE0/exec';
+
         function upgradeClick() {
-            alert('Pro plan coming soon! We will notify you at ' + (currentUser?.email || 'your email'));
+            openWaitlist('pro');
+        }
+
+        function openWaitlist(plan) {
+            const lang = detectDashLang();
+            const t = wlT[lang] || wlT.en;
+            document.getElementById('wl-plan-label').textContent  = plan === 'pro' ? t.plan_pro : t.plan_agency;
+            document.getElementById('wl-title').textContent       = t.title;
+            document.getElementById('wl-sub').textContent         = t.sub;
+            document.getElementById('wl-name-label').textContent  = t.name_label;
+            document.getElementById('wl-name').placeholder        = t.name_ph;
+            document.getElementById('wl-email-label').textContent = t.email_label;
+            document.getElementById('wl-email').placeholder       = t.email_ph;
+            document.getElementById('wl-cta-text').textContent    = t.cta;
+            document.getElementById('wl-success-title').textContent = t.ok_title;
+            document.getElementById('wl-success-text').textContent  = t.ok_text;
+            document.getElementById('wl-form-state').classList.remove('hidden');
+            document.getElementById('wl-success-state').classList.add('hidden');
+            document.getElementById('wl-email-error').style.display = 'none';
+            document.getElementById('wl-name').value  = '';
+            // pre-fill email from session
+            document.getElementById('wl-email').value = currentUser?.email || '';
+            document.getElementById('waitlist-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('wl-name').focus();
+            document.getElementById('waitlist-modal')._plan = plan;
+            document.getElementById('waitlist-modal')._lang = lang;
+        }
+
+        function closeWaitlist() {
+            document.getElementById('waitlist-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function submitWaitlist() {
+            const modal  = document.getElementById('waitlist-modal');
+            const lang   = modal._lang || detectDashLang();
+            const t      = wlT[lang] || wlT.en;
+            const plan   = modal._plan || 'pro';
+            const name   = document.getElementById('wl-name').value.trim();
+            const email  = document.getElementById('wl-email').value.trim();
+            const errEl  = document.getElementById('wl-email-error');
+            const btn    = document.getElementById('wl-submit-btn');
+
+            errEl.style.display = 'none';
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+                errEl.textContent    = t.email_err;
+                errEl.style.display  = 'block';
+                document.getElementById('wl-email').focus();
+                return;
+            }
+
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+
+            const params = new URLSearchParams({ action: 'waitlist', plan, name, email, lang });
+            fetch(SCRIPT_URL, { method: 'POST', body: params, mode: 'no-cors' }).catch(() => {});
+
+            document.getElementById('wl-form-state').classList.add('hidden');
+            document.getElementById('wl-success-state').classList.remove('hidden');
+            btn.disabled = false;
+            btn.style.opacity = '';
         }
 
         // ── Sign out ──────────────────────────────────────
@@ -364,9 +506,12 @@
             window.location.href = '/';
         }
 
-        // ── Close modal on overlay click ──────────────────
+        // ── Close modals on overlay click ─────────────────
         document.getElementById('status-modal').addEventListener('click', function(e) {
             if (e.target === this) closeStatusModal();
+        });
+        document.getElementById('waitlist-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeWaitlist();
         });
 
         init();

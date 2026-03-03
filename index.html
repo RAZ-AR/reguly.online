@@ -506,7 +506,7 @@
                             <li>Sample listing text</li>
                         </ul>
                     </div>
-                    <button class="mt-10 sm:mt-16 w-full py-4 sm:py-5 grid-line border-white/20 font-black uppercase hover:bg-white hover:text-black transition-all" data-t="plan_cta">Select</button>
+                    <button onclick="openModal()" class="mt-10 sm:mt-16 w-full py-4 sm:py-5 grid-line border-white/20 font-black uppercase hover:bg-white hover:text-black transition-all" data-t="plan_cta">Select</button>
                 </div>
                 <div class="p-8 sm:p-12 grid-line border-white/10 bg-[#df5a48] flex flex-col justify-between lg:scale-105 z-10 lg:shadow-2xl">
                     <div>
@@ -521,7 +521,7 @@
                             <li>Legal monitoring</li>
                         </ul>
                     </div>
-                    <button class="mt-10 sm:mt-16 w-full py-4 sm:py-5 bg-black text-white font-black uppercase hover:bg-white hover:text-black transition-all" data-t="plan_cta">Get Pro</button>
+                    <button onclick="openWaitlist('pro')" class="mt-10 sm:mt-16 w-full py-4 sm:py-5 bg-black text-white font-black uppercase hover:bg-white hover:text-black transition-all" data-t="plan_cta">Get Pro</button>
                 </div>
                 <div class="p-8 sm:p-12 grid-line border-white/10 flex flex-col justify-between hover:bg-white/5 transition-colors">
                     <div>
@@ -534,7 +534,7 @@
                             <li>Priority support</li>
                         </ul>
                     </div>
-                    <button class="mt-10 sm:mt-16 w-full py-4 sm:py-5 grid-line border-white/20 font-black uppercase hover:bg-white hover:text-black transition-all" data-t="plan_cta">Contact</button>
+                    <button onclick="openWaitlist('agency')" class="mt-10 sm:mt-16 w-full py-4 sm:py-5 grid-line border-white/20 font-black uppercase hover:bg-white hover:text-black transition-all" data-t="plan_cta">Contact</button>
                 </div>
             </div>
         </section>
@@ -562,6 +562,45 @@
             </div>
         </section>
     </main>
+
+    <!-- Waitlist Modal -->
+    <div id="waitlist-modal" class="fixed inset-0 z-[600] flex items-center justify-center p-4 hidden" style="background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
+        <div class="absolute inset-0" onclick="closeWaitlist()"></div>
+        <div class="modal-box relative w-full max-w-md bg-[#f3f3f3] overflow-hidden" style="border: 1px solid #111; box-shadow: 8px 8px 0px #111;">
+            <!-- header -->
+            <div class="flex items-center justify-between p-6" style="background:#111; border-bottom:1px solid #111;">
+                <div>
+                    <p id="wl-plan-label" class="text-[9px] font-black uppercase tracking-widest mb-1" style="color:#df5a48;"></p>
+                    <h3 id="wl-title" class="font-heading text-2xl" style="color:white;"></h3>
+                </div>
+                <button onclick="closeWaitlist()" style="color:white;font-size:2rem;line-height:1;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;" class="hover:text-[#df5a48] transition-colors font-heading">×</button>
+            </div>
+            <!-- form state -->
+            <div id="wl-form-state" class="p-6 lg:p-8">
+                <p id="wl-sub" class="text-sm font-bold opacity-60 mb-6"></p>
+                <div class="space-y-4">
+                    <div>
+                        <label id="wl-name-label" class="block font-black uppercase text-[10px] tracking-widest mb-2"></label>
+                        <input id="wl-name" type="text" class="modal-input" autocomplete="name">
+                    </div>
+                    <div>
+                        <label id="wl-email-label" class="block font-black uppercase text-[10px] tracking-widest mb-2"></label>
+                        <input id="wl-email" type="email" class="modal-input" autocomplete="email" onkeydown="if(event.key==='Enter') submitWaitlist()">
+                        <p id="wl-email-error" class="field-error"></p>
+                    </div>
+                </div>
+                <button onclick="submitWaitlist()" id="wl-submit-btn" class="btn-star w-full justify-center mt-6" style="font-size:0.8rem;">
+                    <span id="wl-cta-text"></span>
+                </button>
+            </div>
+            <!-- success state -->
+            <div id="wl-success-state" class="hidden p-6 lg:p-8 text-center">
+                <div style="font-size:3rem; margin-bottom:1rem;">✓</div>
+                <h4 id="wl-success-title" class="font-heading text-2xl mb-4"></h4>
+                <p id="wl-success-text" class="text-sm font-bold opacity-60"></p>
+            </div>
+        </div>
+    </div>
 
     <!-- Address Check Modal -->
     <div id="check-modal" class="fixed inset-0 z-[500] flex items-center justify-center p-4 lg:p-8 hidden" style="background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
@@ -694,7 +733,15 @@
                 plan_1_h: "free", plan_2_h: "HOST PLUS", plan_2_promo: "First month €14.50", plan_3_h: "AGENCY", plan_cta: "Select",
                 faq_title: "FAQ",
                 faq_q1: "Is it really legal?", faq_a1: "Yes. Reguly provides compliance data based on official EU, national and city-level legislation. EU Regulation 2024/1028 is mandatory for all short-term rental hosts in the EU from May 20, 2026.",
-                faq_q2: "What if I miss May 20?", faq_a2: "Your listing will be automatically delisted by Airbnb and Booking.com. Re-listing typically takes weeks of manual verification. Fines range from €5,000 to €600,000 depending on your country."
+                faq_q2: "What if I miss May 20?", faq_a2: "Your listing will be automatically delisted by Airbnb and Booking.com. Re-listing typically takes weeks of manual verification. Fines range from €5,000 to €600,000 depending on your country.",
+                wl_title: "JOIN THE WAITLIST",
+                wl_sub: "Pro & Agency plans are coming soon. Leave your details and we'll notify you first.",
+                wl_name_label: "Your Name", wl_name_ph: "John Smith",
+                wl_email_label: "Email Address", wl_email_ph: "you@example.com",
+                wl_cta: "Notify Me →",
+                wl_success_title: "YOU'RE ON THE LIST",
+                wl_success_text: "We'll email you as soon as Pro launches. Thank you!",
+                wl_plan_pro: "HOST PLUS — €29/mo", wl_plan_agency: "AGENCY — €49/mo",
             },
             es: {
                 nav_why: "Por qué", nav_how: "Proceso", nav_pricing: "Precios", nav_faq: "FAQ", nav_cta: "Empezar",
@@ -714,7 +761,15 @@
                 plan_1_h: "gratis", plan_2_h: "HOST PLUS", plan_2_promo: "Primer mes €14.50", plan_3_h: "AGENCIA", plan_cta: "Seleccionar",
                 faq_title: "FAQ",
                 faq_q1: "¿Es realmente legal?", faq_a1: "Sí. Reguly proporciona datos de cumplimiento basados en la legislación oficial de la UE, nacional y municipal. El Reglamento 2024/1028 es obligatorio para todos los anfitriones de alquiler a corto plazo en la UE desde el 20 de mayo de 2026.",
-                faq_q2: "¿Qué pasa si pierdo el 20 de mayo?", faq_a2: "Tu anuncio será eliminado automáticamente por Airbnb y Booking.com. Volver a publicar suele tardar semanas. Las multas van de €5.000 a €600.000 según el país."
+                faq_q2: "¿Qué pasa si pierdo el 20 de mayo?", faq_a2: "Tu anuncio será eliminado automáticamente por Airbnb y Booking.com. Volver a publicar suele tardar semanas. Las multas van de €5.000 a €600.000 según el país.",
+                wl_title: "ÚNETE A LA LISTA",
+                wl_sub: "Los planes Pro y Agencia llegan pronto. Déjanos tus datos y te avisaremos primero.",
+                wl_name_label: "Tu nombre", wl_name_ph: "Juan García",
+                wl_email_label: "Correo electrónico", wl_email_ph: "tu@ejemplo.com",
+                wl_cta: "Avisarme →",
+                wl_success_title: "YA ESTÁS EN LA LISTA",
+                wl_success_text: "Te escribiremos en cuanto lance el plan Pro. ¡Gracias!",
+                wl_plan_pro: "HOST PLUS — €29/mes", wl_plan_agency: "AGENCIA — €49/mes",
             },
             de: {
                 nav_why: "Warum", nav_how: "Prozess", nav_pricing: "Preise", nav_faq: "FAQ", nav_cta: "Starten",
@@ -734,7 +789,15 @@
                 plan_1_h: "gratis", plan_2_h: "HOST PLUS", plan_2_promo: "Erster Monat €14.50", plan_3_h: "AGENTUR", plan_cta: "Auswählen",
                 faq_title: "FAQ",
                 faq_q1: "Ist das wirklich rechtmäßig?", faq_a1: "Ja. Reguly stellt Compliance-Daten auf Basis der offiziellen EU-, nationalen und kommunalen Gesetzgebung bereit. Die Verordnung 2024/1028 ist ab dem 20. Mai 2026 für alle Kurzzeitvermieter in der EU verpflichtend.",
-                faq_q2: "Was passiert, wenn ich den 20. Mai verpasse?", faq_a2: "Ihr Inserat wird automatisch von Airbnb und Booking.com gelöscht. Die Wiederherstellung dauert in der Regel Wochen. Bußgelder reichen von €5.000 bis €500.000 je nach Bundesland."
+                faq_q2: "Was passiert, wenn ich den 20. Mai verpasse?", faq_a2: "Ihr Inserat wird automatisch von Airbnb und Booking.com gelöscht. Die Wiederherstellung dauert in der Regel Wochen. Bußgelder reichen von €5.000 bis €500.000 je nach Bundesland.",
+                wl_title: "WARTELISTE BEITRETEN",
+                wl_sub: "Pro- und Agentur-Pläne kommen bald. Hinterlassen Sie Ihre Daten – wir benachrichtigen Sie als Erste.",
+                wl_name_label: "Ihr Name", wl_name_ph: "Max Mustermann",
+                wl_email_label: "E-Mail-Adresse", wl_email_ph: "sie@beispiel.de",
+                wl_cta: "Benachrichtigen →",
+                wl_success_title: "SIE STEHEN AUF DER LISTE",
+                wl_success_text: "Wir schreiben Ihnen, sobald Pro verfügbar ist. Danke!",
+                wl_plan_pro: "HOST PLUS — €29/Monat", wl_plan_agency: "AGENTUR — €49/Monat",
             },
             fr: {
                 nav_why: "Pourquoi", nav_how: "Processus", nav_pricing: "Tarifs", nav_faq: "FAQ", nav_cta: "Démarrer",
@@ -754,7 +817,15 @@
                 plan_1_h: "gratuit", plan_2_h: "HOST PLUS", plan_2_promo: "Premier mois €14.50", plan_3_h: "AGENCE", plan_cta: "Choisir",
                 faq_title: "FAQ",
                 faq_q1: "Est-ce vraiment légal ?", faq_a1: "Oui. Reguly fournit des données de conformité basées sur la législation officielle de l'UE, nationale et municipale. Le Règlement 2024/1028 est obligatoire pour tous les hôtes de location courte durée dans l'UE à partir du 20 mai 2026.",
-                faq_q2: "Que se passe-t-il si je rate le 20 mai ?", faq_a2: "Votre annonce sera automatiquement supprimée par Airbnb et Booking.com. Le rétablissement prend généralement plusieurs semaines. Les amendes vont de €5 000 à €20 000 selon la ville."
+                faq_q2: "Que se passe-t-il si je rate le 20 mai ?", faq_a2: "Votre annonce sera automatiquement supprimée par Airbnb et Booking.com. Le rétablissement prend généralement plusieurs semaines. Les amendes vont de €5 000 à €20 000 selon la ville.",
+                wl_title: "REJOINDRE LA LISTE D'ATTENTE",
+                wl_sub: "Les plans Pro et Agence arrivent bientôt. Laissez vos coordonnées et nous vous préviendrons en premier.",
+                wl_name_label: "Votre nom", wl_name_ph: "Jean Dupont",
+                wl_email_label: "Adresse e-mail", wl_email_ph: "vous@exemple.fr",
+                wl_cta: "Me notifier →",
+                wl_success_title: "VOUS ÊTES SUR LA LISTE",
+                wl_success_text: "Nous vous enverrons un email dès que Pro est lancé. Merci !",
+                wl_plan_pro: "HOST PLUS — €29/mois", wl_plan_agency: "AGENCE — €49/mois",
             }
         };
 
@@ -769,6 +840,7 @@
 
         function setLang(lang) {
             currentLang = lang;
+            try { localStorage.setItem('reguly_lang', lang); } catch(e) {}
             document.querySelectorAll('[data-t]').forEach(el => {
                 const key = el.getAttribute('data-t');
                 if (translations[lang]?.[key]) {
@@ -2758,6 +2830,75 @@
             const steps = getChecklistSteps('', null, 'Varies by city — see report');
             const doc = buildPDF({ steps });
             doc.save('reguly-5steps-checklist.pdf');
+        }
+
+        // =====================
+        // WAITLIST MODAL
+        // =====================
+        let waitlistPlan = 'pro';
+
+        function openWaitlist(plan) {
+            waitlistPlan = plan;
+            const t = translations[currentLang] || translations.en;
+            document.getElementById('wl-plan-label').textContent = plan === 'pro' ? t.wl_plan_pro : t.wl_plan_agency;
+            document.getElementById('wl-title').textContent       = t.wl_title;
+            document.getElementById('wl-sub').textContent         = t.wl_sub;
+            document.getElementById('wl-name-label').textContent  = t.wl_name_label;
+            document.getElementById('wl-name').placeholder        = t.wl_name_ph;
+            document.getElementById('wl-email-label').textContent = t.wl_email_label;
+            document.getElementById('wl-email').placeholder       = t.wl_email_ph;
+            document.getElementById('wl-cta-text').textContent    = t.wl_cta;
+            document.getElementById('wl-success-title').textContent = t.wl_success_title;
+            document.getElementById('wl-success-text').textContent  = t.wl_success_text;
+            document.getElementById('wl-form-state').classList.remove('hidden');
+            document.getElementById('wl-success-state').classList.add('hidden');
+            document.getElementById('wl-email-error').classList.remove('show');
+            document.getElementById('wl-name').value  = '';
+            document.getElementById('wl-email').value = '';
+            document.getElementById('waitlist-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => document.getElementById('wl-name').focus(), 100);
+        }
+
+        function closeWaitlist() {
+            document.getElementById('waitlist-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function submitWaitlist() {
+            const name  = document.getElementById('wl-name').value.trim();
+            const email = document.getElementById('wl-email').value.trim();
+            const errEl = document.getElementById('wl-email-error');
+            const btn   = document.getElementById('wl-submit-btn');
+            const t     = translations[currentLang] || translations.en;
+
+            errEl.classList.remove('show');
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+                errEl.textContent = currentLang === 'de' ? 'Bitte gültige E-Mail eingeben'
+                    : currentLang === 'fr' ? 'Veuillez entrer un e-mail valide'
+                    : currentLang === 'es' ? 'Por favor introduce un email válido'
+                    : 'Please enter a valid email address';
+                errEl.classList.add('show');
+                document.getElementById('wl-email').focus();
+                return;
+            }
+
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+
+            const params = new URLSearchParams({
+                action:  'waitlist',
+                plan:    waitlistPlan,
+                name:    name,
+                email:   email,
+                lang:    currentLang,
+            });
+            fetch(SCRIPT_URL, { method: 'POST', body: params, mode: 'no-cors' }).catch(() => {});
+
+            document.getElementById('wl-form-state').classList.add('hidden');
+            document.getElementById('wl-success-state').classList.remove('hidden');
+            btn.disabled = false;
+            btn.style.opacity = '';
         }
 
         async function handleSaveAndTrack(btn) {
