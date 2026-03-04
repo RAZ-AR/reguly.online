@@ -704,7 +704,7 @@
     <footer class="bg-[#111111] text-[#f3f3f3] p-6 sm:p-12 lg:p-24">
         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 sm:gap-12 mb-16 sm:mb-32">
             <div>
-                <img src="Reguly.svg" alt="Reguly" class="w-[70vw] sm:w-[50vw] lg:w-[35vw] mb-4 sm:mb-8" style="filter: brightness(0) invert(1);">
+                <img src="Logo_Reguly.svg" alt="Reguly" class="w-[70vw] sm:w-[50vw] lg:w-[35vw] mb-4 sm:mb-8" style="filter: brightness(0) invert(1);">
                 <p class="max-w-md text-base sm:text-xl font-bold opacity-40 uppercase tracking-widest leading-tight">Your AI partner for European short-term rental compliance.</p>
             </div>
             <div class="flex gap-8 sm:gap-16 text-xs font-black uppercase tracking-[0.3em]">
@@ -2611,6 +2611,31 @@
             ];
         }
 
+        let pdfLogoDataUrl = null;
+        (async function preloadPDFLogo() {
+            try {
+                const resp = await fetch('/Logo_Reguly.svg');
+                let svgText = await resp.text();
+                svgText = svgText.replace(/#1d1d1b/gi, '#ffffff');
+                const blob = new Blob([svgText], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                await new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 376; canvas.height = 414;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, 376, 414);
+                        pdfLogoDataUrl = canvas.toDataURL('image/png');
+                        URL.revokeObjectURL(url);
+                        resolve();
+                    };
+                    img.onerror = () => resolve();
+                    img.src = url;
+                });
+            } catch(e) {}
+        })();
+
         function buildPDF(config) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('p', 'mm', 'a4');
@@ -2620,12 +2645,19 @@
                 doc.setFillColor(17, 17, 17);
                 doc.rect(0, 0, W, 28, 'F');
                 doc.setTextColor(255, 255, 255);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(18);
-                doc.text('REGULY', m, 16);
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(7);
-                doc.text('EU REGULATION 2024/1028', m, 23);
+                if (pdfLogoDataUrl) {
+                    doc.addImage(pdfLogoDataUrl, 'PNG', m, 2, 16, 18);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(6);
+                    doc.text('EU REGULATION 2024/1028', m, 25.5);
+                } else {
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(18);
+                    doc.text('REGULY', m, 16);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(7);
+                    doc.text('EU REGULATION 2024/1028', m, 23);
+                }
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(8);
                 doc.text(title, W - m, 16, { align: 'right' });
